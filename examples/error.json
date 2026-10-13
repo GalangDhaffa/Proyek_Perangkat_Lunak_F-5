@@ -1,0 +1,10 @@
+{
+  "code": "PERIODE_NOT_FOUND",
+  "message": "Periode payroll tidak ditemukan.",
+  "details": [
+    {
+      "field": "periodeId",
+      "message": "UUID periode tidak dikenal."
+    }
+  ]
+}

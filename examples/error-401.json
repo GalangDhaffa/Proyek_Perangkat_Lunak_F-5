@@ -1,0 +1,5 @@
+{
+  "code": "UNAUTHORIZED",
+  "message": "Token tidak tersedia atau tidak valid.",
+  "details": []
+}

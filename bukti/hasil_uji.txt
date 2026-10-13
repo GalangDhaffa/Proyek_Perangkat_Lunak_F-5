@@ -1,0 +1,27 @@
+Uji lokal, 13 Oktober 2026. Hasil ini bukan review E-2.
+
+Validasi kontrak dengan openapi-spec-validator 0.7.2 dan openapi-schema-validator 0.6.3:
+LULUS 200 examples/success.json
+LULUS 200 examples/success-empty.json
+LULUS 200 examples/success-termin-only.json
+LULUS 400 examples/error-400.json
+LULUS 401 examples/error-401.json
+LULUS 403 examples/error-403.json
+LULUS 404 examples/error.json
+LULUS OpenAPI 3.0.3, referensi skema, format, YAML/JSON, dan contoh respons
+
+Uji HTTP melalui python -m unittest discover -s tests -v:
+test_allowed_roles ... ok
+test_empty_period_is_success ... ok
+test_forbidden_roles ... ok
+test_missing_and_invalid_auth ... ok
+test_missing_empty_malformed_and_duplicate_id ... ok
+test_success_and_no_personal_fields ... ok
+test_termin_only_period ... ok
+test_unknown_valid_uuid ... ok
+test_unsupported_method ... ok
+test_uppercase_id_and_repeat_read ... ok
+Ran 10 tests
+OK
+
+Tautan repositori dan review konsumen belum tersedia.

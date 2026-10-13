@@ -1,0 +1,385 @@
+openapi: 3.0.3
+info:
+  title: API Rekap Biaya Payroll F-5
+  version: v0.2
+  description: 'Draf kontrak minggu 3, tanggal 2026-10-13, berdasarkan dokumen minggu 2 v0.2. API-K05-01
+    mendukung FTR-K05-09 dan UI-K05-09. Konsumen lintas kelompok: E-2. Kontrak belum direview E-2. Q-12,
+    Q-17, format galat, dan autentikasi final masih terbuka. Server contoh mengembalikan fixture fiktif,
+    belum menghitung payroll atau terhubung ke F-1/F-2/F-3/F-4.'
+servers:
+- url: http://127.0.0.1:8000
+  description: Mock lokal, token dan data demo fiktif
+tags:
+- name: Rekap Biaya
+  description: Agregat payroll dan pembayaran termin per periode.
+security:
+- BearerAuth: []
+paths:
+  /api/payroll/v1/rekap-biaya:
+    get:
+      tags:
+      - Rekap Biaya
+      summary: Membaca rekap biaya per periode
+      operationId: getRekapBiaya
+      description: 'API-K05-01 / FTR-K05-09. Hak akses: manajemen, petugas keuangan, atau layanan E-2
+        berkredensial. Tidak mengirim employeeId, nama, gaji pokok per orang, rekening, NPWP, atau slip
+        individual. Token diperiksa sebelum input. Periode kosong tetap HTTP 200 dengan adaData=false
+        dan agregat 0. totalBiaya selalu null. GET tidak mengubah data. Tidak ada paging, pengurutan,
+        atau body. Parameter query tambahan diabaikan pada mock.'
+      x-api-id: API-K05-01
+      x-feature-id: FTR-K05-09
+      x-ui-id: UI-K05-09
+      x-contract-status: Draf, menunggu review E-2
+      x-allowed-roles:
+      - manajemen
+      - petugas_keuangan
+      - layanan_e2
+      parameters:
+      - name: periodeId
+        in: query
+        required: true
+        description: Satu UUID periode dari ENT-K05-01. UUID diterbitkan F-5. Tidak mewajibkan versi UUID
+          tertentu.
+        schema:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$
+        example: 01a1193d-2500-7c04-854b-8bf03c711dde
+      responses:
+        '200':
+          description: Periode valid, termasuk periode kosong atau termin saja. Tidak memuat rincian pribadi.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RekapBiaya'
+              examples:
+                PayrollDanTermin:
+                  summary: Payroll dan pembayaran termin fiktif
+                  value:
+                    periodeId: 01a1193d-2500-7c04-854b-8bf03c711dde
+                    namaPeriode: Oktober 2026 (contoh fiktif)
+                    tanggalMulai: '2026-10-01'
+                    tanggalAkhir: '2026-10-31'
+                    statusPeriode: Disetujui
+                    adaData: true
+                    jumlahKaryawan: 1
+                    totalPendapatan: 7750000.0
+                    totalBonus: 750000.0
+                    totalPotongan: 200000.0
+                    totalBpjsKaryawan: 65000.0
+                    totalGajiBersih: 7485000.0
+                    totalBpjsPerusahaan: 260000.0
+                    totalTermin: 25000000.0
+                    jumlahTermin: 1
+                    totalBiaya: null
+                    diperbaruiPada: '2026-10-13T19:43:00+07:00'
+                  x-file: examples/success.json
+                PeriodeKosong:
+                  summary: Periode ada, tanpa payroll dan tanpa termin
+                  value:
+                    periodeId: 01a1193d-2500-7c05-854b-8bf03c711dde
+                    namaPeriode: Periode kosong (contoh fiktif)
+                    tanggalMulai: '2026-10-01'
+                    tanggalAkhir: '2026-10-31'
+                    statusPeriode: Draf
+                    adaData: false
+                    jumlahKaryawan: 0
+                    totalPendapatan: 0
+                    totalBonus: 0
+                    totalPotongan: 0
+                    totalBpjsKaryawan: 0
+                    totalGajiBersih: 0
+                    totalBpjsPerusahaan: 0
+                    totalTermin: 0
+                    jumlahTermin: 0
+                    totalBiaya: null
+                    diperbaruiPada: '2026-10-13T19:43:00+07:00'
+                  x-file: examples/success-empty.json
+                TerminSaja:
+                  summary: Tanpa payroll, tetapi ada pembayaran termin
+                  value:
+                    periodeId: 01a1193d-2500-7c06-854b-8bf03c711dde
+                    namaPeriode: Termin saja (contoh fiktif)
+                    tanggalMulai: '2026-10-01'
+                    tanggalAkhir: '2026-10-31'
+                    statusPeriode: Draf
+                    adaData: true
+                    jumlahKaryawan: 0
+                    totalPendapatan: 0
+                    totalBonus: 0
+                    totalPotongan: 0
+                    totalBpjsKaryawan: 0
+                    totalGajiBersih: 0
+                    totalBpjsPerusahaan: 0
+                    totalTermin: 25000000.0
+                    jumlahTermin: 1
+                    totalBiaya: null
+                    diperbaruiPada: '2026-10-13T19:43:00+07:00'
+                  x-file: examples/success-termin-only.json
+        '400':
+          description: periodeId kosong, tidak berbentuk UUID, atau diberikan lebih dari satu kali.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ContohGalat:
+                  value:
+                    code: INVALID_PERIODE_ID
+                    message: periodeId wajib diisi satu kali dengan format UUID yang benar.
+                    details:
+                    - field: periodeId
+                      message: Gunakan satu UUID dalam format 8-4-4-4-12.
+                  x-file: examples/error-400.json
+        '401':
+          description: Token tidak tersedia atau tidak valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ContohGalat:
+                  value:
+                    code: UNAUTHORIZED
+                    message: Token tidak tersedia atau tidak valid.
+                    details: []
+                  x-file: examples/error-401.json
+          headers:
+            WWW-Authenticate:
+              description: Tantangan HTTP Bearer.
+              schema:
+                type: string
+                example: Bearer
+        '403':
+          description: Peran atau kredensial tidak memiliki izin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ContohGalat:
+                  value:
+                    code: FORBIDDEN
+                    message: Pemanggil tidak memiliki izin membaca rekap biaya.
+                    details: []
+                  x-file: examples/error-403.json
+        '404':
+          description: UUID periode valid tetapi tidak dikenal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ContohGalat:
+                  value:
+                    code: PERIODE_NOT_FOUND
+                    message: Periode payroll tidak ditemukan.
+                    details:
+                    - field: periodeId
+                      message: UUID periode tidak dikenal.
+                  x-file: examples/error.json
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Usulan autentikasi mengikuti F-1. Belum menetapkan JWT atau alur OAuth. Mock menerima
+        mock-manajemen, mock-keuangan, dan mock-e2. Token demo bukan kredensial mitra.
+  schemas:
+    RekapBiaya:
+      type: object
+      additionalProperties: false
+      required:
+      - periodeId
+      - namaPeriode
+      - tanggalMulai
+      - tanggalAkhir
+      - statusPeriode
+      - adaData
+      - jumlahKaryawan
+      - totalPendapatan
+      - totalBonus
+      - totalPotongan
+      - totalBpjsKaryawan
+      - totalGajiBersih
+      - totalBpjsPerusahaan
+      - totalTermin
+      - jumlahTermin
+      - totalBiaya
+      - diperbaruiPada
+      properties:
+        periodeId:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$
+          description: ID periode dari ENT-K05-01, tetap stabil dan tidak null.
+          example: 01a1193d-2500-7c04-854b-8bf03c711dde
+        namaPeriode:
+          type: string
+          minLength: 1
+          description: Nama tampil dari ENT-K05-01.
+          example: Oktober 2026 (contoh fiktif)
+        tanggalMulai:
+          type: string
+          format: date
+          description: Awal rentang periode (inklusif). Rentang contoh bukan keputusan cut-off final.
+          example: '2026-10-01'
+        tanggalAkhir:
+          type: string
+          format: date
+          description: Akhir rentang periode (inklusif). Harus >= tanggalMulai.
+          example: '2026-10-31'
+        statusPeriode:
+          type: string
+          enum:
+          - Draf
+          - Dihitung
+          - Menunggu Persetujuan
+          - Disetujui
+          description: Persis mengikuti ENT-K05-01. Status yang boleh masuk rekap final menunggu Q-17.
+            Mock menyediakan data fiktif untuk demo.
+          example: Disetujui
+        adaData:
+          type: boolean
+          description: true bila ada hasil payroll atau pembayaran termin pada periode. Periode termin
+            saja juga true.
+          example: true
+        jumlahKaryawan:
+          type: integer
+          minimum: 0
+          description: Jumlah karyawan dalam hasil payroll ENT-K05-08. Nol bila belum ada hasil.
+          example: 1
+        totalPendapatan:
+          type: number
+          minimum: 0
+          maximum: 9999999999999.99
+          multipleOf: 0.01
+          description: Jumlah totalPendapatan ENT-K05-08. Bonus sudah termasuk, tidak ditambah ulang.
+            Nominal rupiah, maksimal dua desimal.
+          example: 7750000.0
+        totalBonus:
+          type: number
+          minimum: 0
+          maximum: 9999999999999.99
+          multipleOf: 0.01
+          description: Jumlah rincian Bonus ENT-K05-09, ditelusuri ke ENT-K05-05. Bagian dari totalPendapatan.
+            Nominal rupiah, maksimal dua desimal.
+          example: 750000.0
+        totalPotongan:
+          type: number
+          minimum: 0
+          maximum: 9999999999999.99
+          multipleOf: 0.01
+          description: Jumlah potongan komponen pada ENT-K05-08. Tidak termasuk BPJS karyawan. Nominal
+            rupiah, maksimal dua desimal.
+          example: 200000.0
+        totalBpjsKaryawan:
+          type: number
+          minimum: 0
+          maximum: 9999999999999.99
+          multipleOf: 0.01
+          description: Jumlah bpjsKaryawan ENT-K05-08, terpisah dari totalPotongan. Nominal rupiah, maksimal
+            dua desimal.
+          example: 65000.0
+        totalGajiBersih:
+          type: number
+          minimum: 0
+          maximum: 9999999999999.99
+          multipleOf: 0.01
+          description: 'Jumlah gajiBersih ENT-K05-08. Usulan rumus: pendapatan - potongan komponen - BPJS
+            karyawan. PPh 21 menunggu Q-11. Nominal rupiah, maksimal dua desimal.'
+          example: 7485000.0
+        totalBpjsPerusahaan:
+          type: number
+          minimum: 0
+          maximum: 9999999999999.99
+          multipleOf: 0.01
+          description: Jumlah bpjsPerusahaan ENT-K05-08. Ditampilkan terpisah dan tidak mengurangi gaji
+            bersih. Nominal rupiah, maksimal dua desimal.
+          example: 260000.0
+        totalTermin:
+          type: number
+          minimum: 0
+          maximum: 9999999999999.99
+          multipleOf: 0.01
+          description: Jumlah nominalDibayar ENT-K05-15 melalui ENT-K05-13. Usulan demo memakai tanggalBayar
+            dalam rentang inklusif, dasar final menunggu Q-12. Nominal rupiah, maksimal dua desimal.
+          example: 25000000.0
+        jumlahTermin:
+          type: integer
+          minimum: 0
+          description: Jumlah termin unik yang pembayarannya masuk rekap, melalui ENT-K05-13/15.
+          example: 1
+        totalBiaya:
+          type: number
+          nullable: true
+          enum:
+          - null
+          description: Wajib ada dan selalu null pada draf v0.2, termasuk periode kosong. Definisi total
+            biaya menunggu Q-17. Jangan menjumlah seluruh field agregat karena beberapa saling mencakup.
+          example: null
+        diperbaruiPada:
+          type: string
+          format: date-time
+          pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?\+07:00$
+          description: Waktu agregat dihitung dengan offset WIB +07:00. Pada mock nilainya tetap dari
+            fixture.
+          example: '2026-10-13T19:43:00+07:00'
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - message
+      - details
+      properties:
+        code:
+          type: string
+          enum:
+          - INVALID_PERIODE_ID
+          - UNAUTHORIZED
+          - FORBIDDEN
+          - PERIODE_NOT_FOUND
+          - METHOD_NOT_ALLOWED
+          - ROUTE_NOT_FOUND
+          description: Kode galat draf. Pemetaan 400/401/403/404 sesuai contoh respons. 405 dan route
+            404 hanya untuk proteksi mock.
+        message:
+          type: string
+          minLength: 1
+          description: Penjelasan singkat yang dapat dibaca pengguna.
+        details:
+          type: array
+          description: Rincian field bila relevan. [] bila tidak ada.
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - field
+            - message
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+x-open-questions:
+- id: Q-12
+  topic: Dasar periode pembayaran termin
+  owner: Dhaffa Galang Fahriza (usulan), mitra
+  target: Belum ditetapkan
+  status: Terbuka
+- id: Q-17
+  topic: Definisi total biaya, status yang masuk rekap, dan format data E-2
+  owner: Dhaffa Galang Fahriza (usulan), E-2
+  target: Belum ditetapkan
+  status: Terbuka
+- id: Q-14
+  topic: Konfirmasi apakah data ID Proyek dan penugasan PM tersedia di dalam data kontrak
+  owner: Zaki Ramadhan Wijaya (usulan), F-2
+  target: Belum ditetapkan
+  status: Terbuka
+- id: OPEN-01
+  topic: Skema autentikasi dan format galat final
+  owner: F-1/F-5/E-2, perwakilan belum ditetapkan
+  target: Belum ditetapkan
+  status: Terbuka

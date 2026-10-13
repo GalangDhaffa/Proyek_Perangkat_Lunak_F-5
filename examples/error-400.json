@@ -1,0 +1,10 @@
+{
+  "code": "INVALID_PERIODE_ID",
+  "message": "periodeId wajib diisi satu kali dengan format UUID yang benar.",
+  "details": [
+    {
+      "field": "periodeId",
+      "message": "Gunakan satu UUID dalam format 8-4-4-4-12."
+    }
+  ]
+}

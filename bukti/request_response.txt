@@ -1,0 +1,34 @@
+Bukti endpoint mock berjalan secara lokal, 13 Oktober 2026.
+Port uji dialokasikan otomatis. README memakai port default 8000.
+Semua data dan token fiktif.
+
+GET http://127.0.0.1:39993/api/payroll/v1/rekap-biaya?periodeId=01a1193d-2500-7c04-854b-8bf03c711dde
+Authorization: Bearer mock-e2
+
+HTTP 200
+Server: BaseHTTP/0.6 Python/3.12.14
+Date: Tue, 13 Oct 2026 12:55:59 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 515
+Cache-Control: no-store
+
+
+{
+  "periodeId": "01a1193d-2500-7c04-854b-8bf03c711dde",
+  "namaPeriode": "Oktober 2026 (contoh fiktif)",
+  "tanggalMulai": "2026-10-01",
+  "tanggalAkhir": "2026-10-31",
+  "statusPeriode": "Disetujui",
+  "adaData": true,
+  "jumlahKaryawan": 1,
+  "totalPendapatan": 7750000.0,
+  "totalBonus": 750000.0,
+  "totalPotongan": 200000.0,
+  "totalBpjsKaryawan": 65000.0,
+  "totalGajiBersih": 7485000.0,
+  "totalBpjsPerusahaan": 260000.0,
+  "totalTermin": 25000000.0,
+  "jumlahTermin": 1,
+  "totalBiaya": null,
+  "diperbaruiPada": "2026-10-13T19:43:00+07:00"
+}

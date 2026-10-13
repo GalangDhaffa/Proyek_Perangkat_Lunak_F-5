@@ -1,0 +1,19 @@
+{
+  "periodeId": "01a1193d-2500-7c05-854b-8bf03c711dde",
+  "namaPeriode": "Periode kosong (contoh fiktif)",
+  "tanggalMulai": "2026-10-01",
+  "tanggalAkhir": "2026-10-31",
+  "statusPeriode": "Draf",
+  "adaData": false,
+  "jumlahKaryawan": 0,
+  "totalPendapatan": 0,
+  "totalBonus": 0,
+  "totalPotongan": 0,
+  "totalBpjsKaryawan": 0,
+  "totalGajiBersih": 0,
+  "totalBpjsPerusahaan": 0,
+  "totalTermin": 0,
+  "jumlahTermin": 0,
+  "totalBiaya": null,
+  "diperbaruiPada": "2026-10-13T19:43:00+07:00"
+}
