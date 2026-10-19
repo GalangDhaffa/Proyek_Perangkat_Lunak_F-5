@@ -3,5 +3,9 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/rekap-biaya');
+});
+
+Route::get('/rekap-biaya', function () {
+    return view('rekap-biaya');
 });
