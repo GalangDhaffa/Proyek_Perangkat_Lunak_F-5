@@ -27,6 +27,25 @@ Pada Windows, gunakan `py mock_server.py` jika perintah `python` belum tersedia.
 
 Alamat default: `http://127.0.0.1:8000`. Jika port digunakan aplikasi lain, jalankan `python mock_server.py --port 8001` dan gunakan port yang sama saat mengirim request. Tekan Ctrl+C untuk menghentikan server.
 
+## Menjalankan Laravel demo pada port 8001
+
+Di folder `web/`, pastikan dependensi sudah sesuai package-lock/composer.lock lalu jalankan:
+
+```bash
+composer install
+npm install
+php artisan key:generate
+php artisan serve --port=8001
+```
+
+Jika `.env` belum ada, buat salinan dari `.env.example` terlebih dahulu. Aplikasi demo ini memakai mock token untuk autentikasi lokal dan bukan integrasi nyata F-1. Token demo yang diizinkan: `mock-manajemen`, `mock-keuangan`, dan `mock-e2`. Token `mock-karyawan` dan `mock-tenaga-ahli` akan ditolak dengan HTTP 403. Header kosong atau token tidak dikenal mendapat HTTP 401.
+
+Untuk pengujian API dari terminal:
+
+```bash
+curl -i -H "Authorization: Bearer mock-e2" "http://127.0.0.1:8001/api/payroll/v1/rekap-biaya?periodeId=01a1193d-2500-7c04-854b-8bf03c711dde"
+```
+
 ## Mencoba request
 
 Pada Postman atau klien HTTP lain:
