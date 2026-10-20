@@ -69,8 +69,8 @@
                                 <option value="manajemen" selected>Manajemen</option>
                                 <option value="petugas_keuangan">Petugas Keuangan</option>
                                 <option value="layanan_e2">Layanan E-2</option>
-                                <option value="unauthorized">Simulasi 401 — token tidak valid</option>
-                                <option value="forbidden">Simulasi 403 — peran tanpa izin</option>
+                                <option value="unauthorized">Sesi tidak valid</option>
+                                <option value="forbidden">Karyawan</option>
                             </select>
                         </div>
 
