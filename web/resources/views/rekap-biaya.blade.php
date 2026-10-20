@@ -59,8 +59,8 @@
                         <option value="manajemen" selected>Manajemen (Bearer mock-manajemen)</option>
                         <option value="petugas_keuangan">Petugas Keuangan (Bearer mock-keuangan)</option>
                         <option value="layanan_e2">Layanan E-2 (Bearer mock-e2)</option>
-                        <option value="unauthorized">Simulasi 401 - Tanpa/Salah Token</option>
-                        <option value="forbidden">Simulasi 403 - Peran Ditolak</option>
+                        <option value="unauthorized">Simulasi 401 - Token invalid (kirim ke backend)</option>
+                        <option value="forbidden">Simulasi 403 - Bearer mock-karyawan (kirim ke backend)</option>
                     </select>
                 </div>
             </div>
@@ -77,12 +77,12 @@
         <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2">
             <div class="flex items-center gap-2">
                 <span>Status koneksi:</span>
-                <span id="badge-source" class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                <span id="badge-source" class="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                     Menghubungkan...
                 </span>
             </div>
             <div class="text-[11px] text-slate-400">
-                Pilihan periode menggunakan ID fixture terverifikasi sesuai OpenAPI v0.2
+                Semua request dikirim ke backend Laravel. Backend menggunakan fixture demo, bukan data nyata.
             </div>
         </div>
     </x-ui.card>

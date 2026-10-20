@@ -1,108 +1,14 @@
 /**
  * Rekap Biaya Frontend Module - ERP PT Anaheim Nimbus Universal (Kelompok 5 F-5)
  * Mematuhi kontrak OpenAPI v0.2 (API-K05-01 / FTR-K05-09 / UI-K05-09).
+ *
+ * Sumber data: endpoint backend Laravel GET /api/payroll/v1/rekap-biaya
+ * Backend menggunakan fixture demo (bukan integrasi F-1/F-2/F-3/F-4 nyata).
+ * Autentikasi memakai token mock yang dikenali backend demo.
  */
 
-// Fixture cadangan sementara jika endpoint backend Laravel belum tersedia
-const FIXTURES = {
-    // 1. Sukses dengan payroll dan termin
-    '01a1193d-2500-7c04-854b-8bf03c711dde': {
-        status: 200,
-        data: {
-            periodeId: "01a1193d-2500-7c04-854b-8bf03c711dde",
-            namaPeriode: "Oktober 2026 (contoh fiktif)",
-            tanggalMulai: "2026-10-01",
-            tanggalAkhir: "2026-10-31",
-            statusPeriode: "Disetujui",
-            adaData: true,
-            jumlahKaryawan: 1,
-            totalPendapatan: 7750000.0,
-            totalBonus: 750000.0,
-            totalPotongan: 200000.0,
-            totalBpjsKaryawan: 65000.0,
-            totalGajiBersih: 7485000.0,
-            totalBpjsPerusahaan: 260000.0,
-            totalTermin: 25000000.0,
-            jumlahTermin: 1,
-            totalBiaya: null,
-            diperbaruiPada: "2026-10-13T19:43:00+07:00"
-        }
-    },
-    // 2. Periode kosong (tanpa payroll dan termin)
-    '01a1193d-2500-7c05-854b-8bf03c711dde': {
-        status: 200,
-        data: {
-            periodeId: "01a1193d-2500-7c05-854b-8bf03c711dde",
-            namaPeriode: "Periode kosong (contoh fiktif)",
-            tanggalMulai: "2026-10-01",
-            tanggalAkhir: "2026-10-31",
-            statusPeriode: "Draf",
-            adaData: false,
-            jumlahKaryawan: 0,
-            totalPendapatan: 0,
-            totalBonus: 0,
-            totalPotongan: 0,
-            totalBpjsKaryawan: 0,
-            totalGajiBersih: 0,
-            totalBpjsPerusahaan: 0,
-            totalTermin: 0,
-            jumlahTermin: 0,
-            totalBiaya: null,
-            diperbaruiPada: "2026-10-13T19:43:00+07:00"
-        }
-    },
-    // 3. Termin saja (tanpa payroll, ada termin)
-    '01a1193d-2500-7c06-854b-8bf03c711dde': {
-        status: 200,
-        data: {
-            periodeId: "01a1193d-2500-7c06-854b-8bf03c711dde",
-            namaPeriode: "Termin saja (contoh fiktif)",
-            tanggalMulai: "2026-10-01",
-            tanggalAkhir: "2026-10-31",
-            statusPeriode: "Draf",
-            adaData: true,
-            jumlahKaryawan: 0,
-            totalPendapatan: 0,
-            totalBonus: 0,
-            totalPotongan: 0,
-            totalBpjsKaryawan: 0,
-            totalGajiBersih: 0,
-            totalBpjsPerusahaan: 0,
-            totalTermin: 25000000.0,
-            jumlahTermin: 1,
-            totalBiaya: null,
-            diperbaruiPada: "2026-10-13T19:43:00+07:00"
-        }
-    },
-    // 4. Kasus error 404 (UUID tidak dikenal)
-    '00000000-0000-0000-0000-000000000000': {
-        status: 404,
-        data: {
-            code: "PERIODE_NOT_FOUND",
-            message: "Periode payroll tidak ditemukan.",
-            details: [
-                {
-                    field: "periodeId",
-                    message: "UUID periode tidak dikenal."
-                }
-            ]
-        }
-    },
-    // 5. Kasus error 400 (Format UUID tidak valid)
-    'invalid-uuid-sample': {
-        status: 400,
-        data: {
-            code: "INVALID_PERIODE_ID",
-            message: "periodeId wajib diisi satu kali dengan format UUID yang benar.",
-            details: [
-                {
-                    field: "periodeId",
-                    message: "Gunakan satu UUID dalam format 8-4-4-4-12."
-                }
-            ]
-        }
-    }
-};
+/** Batas waktu request ke backend (ms). Mencegah loading terkunci tanpa batas. */
+const REQUEST_TIMEOUT_MS = 10000;
 
 /**
  * Format angka rupiah sesuai pedoman F-5 (pemformatan di frontend).
@@ -137,6 +43,7 @@ export function formatTanggal(dateStr) {
  */
 export function initRekapBiaya() {
     const selectPeriode = document.getElementById('select-periode');
+    const inputCustomContainer = document.getElementById('input-custom-container');
     const inputCustomUuid = document.getElementById('input-custom-uuid');
     const selectAuthRole = document.getElementById('select-auth-role');
     const btnTampilkan = document.getElementById('btn-tampilkan-rekap');
@@ -150,116 +57,102 @@ export function initRekapBiaya() {
 
     if (!btnTampilkan || !selectPeriode) return;
 
-    // Toggle custom UUID input bila dipilih opsi 'manual'
+    // Toggle pembungkus input UUID manual saat pilihan berubah
     selectPeriode.addEventListener('change', () => {
         if (selectPeriode.value === 'custom') {
-            inputCustomUuid.classList.remove('hidden');
-            inputCustomUuid.focus();
+            inputCustomContainer.classList.remove('hidden');
+            if (inputCustomUuid) inputCustomUuid.focus();
         } else {
-            inputCustomUuid.classList.add('hidden');
+            inputCustomContainer.classList.add('hidden');
         }
     });
 
     async function loadRekap() {
         let periodeId = selectPeriode.value;
         if (periodeId === 'custom') {
-            periodeId = inputCustomUuid.value.trim();
+            periodeId = inputCustomUuid ? inputCustomUuid.value.trim() : '';
         }
 
+        // Petakan pilihan peran ke token mock yang dikenali backend
         const authRole = selectAuthRole ? selectAuthRole.value : 'manajemen';
-        let token = 'mock-manajemen';
-        if (authRole === 'petugas_keuangan') token = 'mock-keuangan';
-        if (authRole === 'layanan_e2') token = 'mock-e2';
-        if (authRole === 'unauthorized') token = 'invalid-token-demo';
-        if (authRole === 'forbidden') token = 'mock-unauthorized-role';
+        let token;
+        if (authRole === 'manajemen') token = 'mock-manajemen';
+        else if (authRole === 'petugas_keuangan') token = 'mock-keuangan';
+        else if (authRole === 'layanan_e2') token = 'mock-e2';
+        else if (authRole === 'unauthorized') token = 'invalid-token-demo';
+        // 403: kirim token mock-karyawan yang dikenali backend sebagai peran tanpa izin
+        else if (authRole === 'forbidden') token = 'mock-karyawan';
+        else token = 'mock-manajemen';
 
-        // Set UI loading
+        // Sembunyikan hasil sebelumnya dan tampilkan loading
         stateLoading.classList.remove('hidden');
         stateError.classList.add('hidden');
         stateContent.classList.add('hidden');
         btnTampilkan.disabled = true;
 
+        // Update badge ke "Menghubungkan..." saat request dimulai
+        if (badgeSource) {
+            badgeSource.textContent = 'Menghubungkan ke backend...';
+            badgeSource.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200';
+        }
+
+        const SOURCE_LABEL = 'Backend Laravel (/api/payroll/v1/rekap-biaya)';
+
         try {
-            // Simulasi penolakan autentikasi lokal jika dipilih skenario khusus
-            if (authRole === 'unauthorized') {
-                showError({
-                    code: 'UNAUTHORIZED',
-                    message: 'Token tidak tersedia atau tidak valid.',
-                    details: []
-                }, 401, 'Simulasi Autentikasi');
-                return;
-            }
+            // Buat AbortController untuk batas waktu request
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-            if (authRole === 'forbidden') {
-                showError({
-                    code: 'FORBIDDEN',
-                    message: 'Pemanggil tidak memiliki izin membaca rekap biaya.',
-                    details: []
-                }, 403, 'Simulasi Otorisasi');
-                return;
-            }
-
-            // 1. Coba panggil endpoint backend Laravel resmi sesuai OpenAPI
-            let usedSource = 'Backend Laravel (/api/payroll/v1/rekap-biaya)';
-            let isBackendSuccess = false;
-            let resultData = null;
-
+            let response;
             try {
-                const response = await fetch(`/api/payroll/v1/rekap-biaya?periodeId=${encodeURIComponent(periodeId)}`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                response = await fetch(
+                    `/api/payroll/v1/rekap-biaya?periodeId=${encodeURIComponent(periodeId)}`,
+                    {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                        },
+                        signal: controller.signal,
                     }
-                });
-
-                const contentType = response.headers.get('content-type') || '';
-                if (contentType.includes('application/json')) {
-                    const json = await response.json();
-                    if (response.ok) {
-                        resultData = json;
-                        isBackendSuccess = true;
-                    } else {
-                        // Error resmi dari backend sesuai schema ErrorResponse
-                        showError(json, response.status, usedSource);
-                        return;
-                    }
-                } else {
-                    // Endpoint mengembalikan 404 HTML (route Laravel belum dibuat oleh backend)
-                    throw new Error('Backend route belum aktif');
-                }
-            } catch (backendErr) {
-                // Backend Laravel belum siap / rute belum terdaftar: Beralih ke Adapter Fixture sementara
-                usedSource = 'Adapter Fixture Sementara (Backend belum siap)';
-                const fixture = FIXTURES[periodeId];
-
-                if (fixture) {
-                    if (fixture.status === 200) {
-                        resultData = fixture.data;
-                    } else {
-                        showError(fixture.data, fixture.status, usedSource);
-                        return;
-                    }
-                } else {
-                    // Default error 404 jika UUID tidak dikenal dalam fixture
-                    showError({
-                        code: 'PERIODE_NOT_FOUND',
-                        message: 'Periode payroll tidak ditemukan.',
-                        details: [{ field: 'periodeId', message: 'UUID periode tidak dikenal dalam adapter fixture.' }]
-                    }, 404, usedSource);
-                    return;
-                }
+                );
+            } finally {
+                clearTimeout(timeoutId);
             }
 
-            // Render hasil sukses / empty
-            renderSuccess(resultData, usedSource);
+            // Periksa content-type. Respons HTML (mis. halaman 404 Laravel) bukan JSON valid.
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                showError({
+                    code: 'INVALID_RESPONSE',
+                    message: `Backend mengembalikan respons bukan JSON (${response.status}). Pastikan server Laravel berjalan dan route terdaftar.`,
+                    details: [],
+                }, response.status || 0, SOURCE_LABEL, true);
+                return;
+            }
+
+            const json = await response.json();
+
+            if (response.ok) {
+                renderSuccess(json, SOURCE_LABEL);
+            } else {
+                // Error resmi dari backend sesuai schema ErrorResponse (400/401/403/404)
+                showError(json, response.status, SOURCE_LABEL, false);
+            }
 
         } catch (err) {
+            // Koneksi gagal, batas waktu habis, atau kesalahan jaringan — tampilkan kegagalan nyata
+            let message;
+            if (err.name === 'AbortError') {
+                message = `Request timeout setelah ${REQUEST_TIMEOUT_MS / 1000} detik. Periksa apakah server Laravel berjalan di port 8001.`;
+            } else {
+                message = `Koneksi ke backend gagal: ${err.message || 'Network error'}. Pastikan server Laravel berjalan di http://127.0.0.1:8001.`;
+            }
             showError({
-                code: 'UNEXPECTED_ERROR',
-                message: err.message || 'Terjadi kesalahan saat memproses data.',
-                details: []
-            }, 500, 'Klien Frontend');
+                code: 'CONNECTION_ERROR',
+                message,
+                details: [],
+            }, 0, SOURCE_LABEL, true);
         } finally {
             stateLoading.classList.add('hidden');
             btnTampilkan.disabled = false;
@@ -270,14 +163,10 @@ export function initRekapBiaya() {
         stateContent.classList.remove('hidden');
         stateError.classList.add('hidden');
 
-        // Update indikator sumber data
+        // Update indikator sumber data — hijau untuk backend berhasil
         if (badgeSource) {
             badgeSource.textContent = sourceLabel;
-            if (sourceLabel.includes('Backend')) {
-                badgeSource.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
-            } else {
-                badgeSource.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200';
-            }
+            badgeSource.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
         }
 
         // Teks periode header & status
@@ -344,17 +233,29 @@ export function initRekapBiaya() {
         document.getElementById('meta-jumlah-termin').textContent = `${data.jumlahTermin} termin`;
     }
 
-    function showError(errData, httpStatus, sourceLabel) {
+    /**
+     * Tampilkan state error dan sembunyikan konten sukses sebelumnya.
+     * @param {object} errData - Objek error dari backend (code, message, details)
+     * @param {number} httpStatus - Kode status HTTP
+     * @param {string} sourceLabel - Label sumber data untuk badge
+     * @param {boolean} isConnectionError - true jika kegagalan di sisi koneksi/jaringan
+     */
+    function showError(errData, httpStatus, sourceLabel, isConnectionError = false) {
+        // Pastikan konten sukses sebelumnya disembunyikan
         stateContent.classList.add('hidden');
         stateError.classList.remove('hidden');
 
         if (badgeSource) {
             badgeSource.textContent = sourceLabel;
-            badgeSource.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200';
+            if (isConnectionError) {
+                badgeSource.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-orange-50 text-orange-700 border border-orange-200';
+            } else {
+                badgeSource.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200';
+            }
         }
 
         document.getElementById('error-code').textContent = errData.code || `HTTP_${httpStatus}`;
-        document.getElementById('error-http-status').textContent = `HTTP ${httpStatus}`;
+        document.getElementById('error-http-status').textContent = httpStatus > 0 ? `HTTP ${httpStatus}` : 'Koneksi gagal';
         document.getElementById('error-message').textContent = errData.message || 'Terjadi kesalahan pada permintaan rekap.';
 
         const detailsEl = document.getElementById('error-details');
