@@ -8,21 +8,15 @@
 </head>
 <body class="h-full flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-500 selection:text-white">
 
-    {{-- Top Demo Role Switcher Bar (Sesuai Figma Prototype) --}}
+    {{-- Top Bar: Penanda Mode Demo --}}
     <header class="bg-blue-50/70 border-b border-blue-100/80 text-xs px-6 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div class="flex items-center gap-4">
-            <span class="font-semibold text-blue-900 tracking-wide">PROTOTYPE &middot; Data contoh</span>
-            <nav class="flex items-center gap-3 text-slate-600">
-                <a href="#" class="hover:text-blue-600 transition-colors">Payroll</a>
-                <a href="#" class="hover:text-blue-600 transition-colors">Admin</a>
-                <a href="#" class="hover:text-blue-600 transition-colors">Approver</a>
-                <a href="#" class="hover:text-blue-600 transition-colors">Karyawan</a>
-                <a href="#" class="hover:text-blue-600 transition-colors">PM</a>
-                <a href="#" class="hover:text-blue-600 transition-colors">Keuangan</a>
-                <a href="{{ url('/rekap-biaya') }}" class="font-semibold text-blue-600 bg-blue-100/60 px-2 py-0.5 rounded transition-colors">Manajemen</a>
-            </nav>
+        <div class="flex items-center gap-3">
+            <span class="inline-flex items-center gap-1.5 font-semibold text-blue-900">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                Data demo &mdash; bukan data nyata
+            </span>
         </div>
-        <div class="flex items-center gap-2 text-slate-600 font-medium">
+        <div class="flex items-center gap-2 text-slate-500">
             <span>{{ $sessionUser ?? 'Manajemen · Sesi demo' }}</span>
         </div>
     </header>
@@ -99,7 +93,6 @@
             <footer class="mt-auto border-t border-slate-200/80 bg-white/60 px-8 py-3 text-xs text-slate-400 flex items-center justify-between">
                 <div>Kelompok 5 &middot; Kelas F</div>
                 <div>Seluruh nama, tanggal, dan angka adalah data contoh.</div>
-                <div class="font-mono text-[11px]">{{ $screenCode ?? 'UI-K05-09' }}</div>
             </footer>
         </main>
     </div>
