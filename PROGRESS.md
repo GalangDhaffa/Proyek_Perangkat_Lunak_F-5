@@ -16,7 +16,7 @@ Jangan mengubah status menjadi selesai tanpa mencatat hasil dan bukti. Bedakan s
 
 ## Ringkasan saat ini
 
-Kontrak rekap v0.2, contoh respons, dan mock Python sudah dibuat serta pernah diuji. Aplikasi Laravel 13.7.0 sudah berhasil dipasang pada mesin Dhaffa. Implementasi UI rekap dan endpoint rekap Laravel belum ditunjukkan. Pemasangan/aktivasi Blaze dan pembukaan halaman Laravel belum dikonfirmasi.
+Kontrak rekap v0.2, contoh respons, mock Python, serta halaman frontend rekap sudah ada. Aplikasi Laravel 13.7.0 berada di folder `web/` dan endpoint backend demo GET `/api/payroll/v1/rekap-biaya` sudah diimplementasikan dengan autentikasi mock, validasi UUID, kasus 200/400/401/403/404, serta fixture rekap tiga skenario yang sesuai dengan OpenAPI. Pemasangan/aktivasi Blaze dan pembukaan halaman Laravel belum menjadi bukti integrasi nyata F-1/F-2/F-3/F-4.
 
 Coding ditangani Muhamad Rizky untuk frontend dan Arinal Haq untuk backend. Dhaffa menangani kontrak/koordinasi, Danny pengujian/laporan, dan Zaki bukti/README.
 
@@ -32,7 +32,7 @@ Coding ditangani Muhamad Rizky untuk frontend dan Arinal Haq untuk backend. Dhaf
 | P-06 | Pemasangan dan aktivasi Blaze | Arinal dan Rizky, dibantu Dhaffa | Terverifikasi. livewire/blaze v1.0.19 terpasang di vendor, AppServiceProvider memuat Blaze::optimize() untuk views/components/ui, komponen Blade anonim berhasil dirender. |
 | P-07 | Frame Figma dan komponen bersama | Rizky | Terverifikasi. Acuan prototipe Figma UI-K05-01 sampai UI-K05-09 diterima. Layout bersama Anaheim Nimbus dan komponen UI dibuat di components/ui. |
 | P-08 | UI rekap biaya | Rizky | Terverifikasi. Halaman rekap-biaya.blade.php dan modul JS selesai sesuai UI-K05-09 dan 17 field RekapBiaya OpenAPI. Format rupiah di frontend, totalBiaya: null tampil "Belum ditetapkan", penanganan loading, data kosong, error 400/401/403/404, serta adapter fixture transparan. |
-| P-09 | Endpoint rekap Laravel dan akses | Arinal | Direncanakan. Respons 17 field dan error harus sesuai OpenAPI. |
+| P-09 | Endpoint rekap Laravel dan akses | Arinal | Terverifikasi. Route `/api/payroll/v1/rekap-biaya` aktif pada Laravel, validasi token mock dan UUID sesuai kontrak, serta 3 fixture sesuai skenario demo. |
 | P-10 | Data demo dan sumber periode | Arinal, Rizky untuk pemakaian UI | Terverifikasi di frontend. Dropdown periode memakai UUID fixture valid, kosong, termin saja, dan skenario galat. |
 | P-11 | Integrasi UI dengan endpoint Laravel | Rizky dan Arinal | Sebagian (Frontend siap). Frontend mencoba fetch ke /api/payroll/v1/rekap-biaya dan otomatis fallback ke adapter fixture transparan jika endpoint belum siap. |
 | P-12 | Review konsumen E-2 | Dhaffa | Menunggu balasan. Pengguna menyatakan link repo sudah dikirim. |
