@@ -8,11 +8,21 @@ use Tests\TestCase;
 class ExampleTest extends TestCase
 {
     /**
-     * A basic test example.
+     * Route / seharusnya redirect ke /rekap-biaya (302), bukan langsung 200.
      */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_root_redirects_to_rekap_biaya(): void
     {
         $response = $this->get('/');
+
+        $response->assertRedirect('/rekap-biaya');
+    }
+
+    /**
+     * Halaman utama rekap biaya dapat diakses dan mengembalikan 200.
+     */
+    public function test_rekap_biaya_page_returns_successful_response(): void
+    {
+        $response = $this->get('/rekap-biaya');
 
         $response->assertStatus(200);
     }

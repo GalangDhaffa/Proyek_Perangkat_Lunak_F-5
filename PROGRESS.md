@@ -25,22 +25,22 @@ Coding ditangani Muhamad Rizky untuk frontend dan Arinal Haq untuk backend. Dhaf
 | ID | Pekerjaan | Pemilik | Status dan langkah berikutnya |
 | --- | --- | --- | --- |
 | P-01 | OpenAPI rekap v0.2 dan contoh respons | Dhaffa, bersama pengembang jika kontrak berubah | Terverifikasi tersedia. Pertahankan sebagai acuan sementara sambil menunggu E-2. |
-| P-02 | Mock Python dan validasi awal | Paket awal F-5 | Terverifikasi pernah lulus 10 pengujian dan validator. Hasil historis, bukan bukti implementasi Laravel lulus. |
+| P-02 | Mock Python dan validasi awal | Paket awal F-5 | Terverifikasi ulang 20 Oktober 2026. 10 pengujian mock Python lulus pada sesi ini. |
 | P-03 | Push awal repo GitHub | Dhaffa | Terverifikasi dari screenshot push. Isi remote terbaru belum diperiksa ulang. |
 | P-04 | Laravel di folder web | Arinal, pemasangan awal oleh Dhaffa | Terverifikasi versi 13.7.0 melalui php artisan --version. |
-| P-05 | npm install, build, dan halaman Laravel | Arinal, Rizky | Terverifikasi. npm run build sukses (576ms), halaman http://127.0.0.1:8001/rekap-biaya merespons HTTP 200. |
+| P-05 | npm install, build, dan halaman Laravel | Arinal, Rizky | Terverifikasi ulang 20 Oktober 2026. npm run build sukses (664ms). |
 | P-06 | Pemasangan dan aktivasi Blaze | Arinal dan Rizky, dibantu Dhaffa | Terverifikasi. livewire/blaze v1.0.19 terpasang di vendor, AppServiceProvider memuat Blaze::optimize() untuk views/components/ui, komponen Blade anonim berhasil dirender. |
 | P-07 | Frame Figma dan komponen bersama | Rizky | Terverifikasi. Acuan prototipe Figma UI-K05-01 sampai UI-K05-09 diterima. Layout bersama Anaheim Nimbus dan komponen UI dibuat di components/ui. |
-| P-08 | UI rekap biaya | Rizky | Terverifikasi. Halaman rekap-biaya.blade.php dan modul JS selesai sesuai UI-K05-09 dan 17 field RekapBiaya OpenAPI. Format rupiah di frontend, totalBiaya: null tampil "Belum ditetapkan", penanganan loading, data kosong, error 400/401/403/404, serta adapter fixture transparan. |
-| P-09 | Endpoint rekap Laravel dan akses | Arinal | Terverifikasi. Route `/api/payroll/v1/rekap-biaya` aktif pada Laravel, validasi token mock dan UUID sesuai kontrak, serta 3 fixture sesuai skenario demo. |
+| P-08 | UI rekap biaya | Rizky | Terverifikasi ulang 20 Oktober 2026. Perbaikan: (1) 401/403 sekarang fetch ke backend nyata, (2) fallback fixture dihapus — kegagalan koneksi menampilkan error nyata, (3) toggle input UUID manual diperbaiki, (4) timeout request 10 detik ditambahkan. |
+| P-09 | Endpoint rekap Laravel dan akses | Arinal | Terverifikasi. Perbaikan: UUID pencarian sekarang case-insensitive (strtolower). |
 | P-10 | Data demo dan sumber periode | Arinal, Rizky untuk pemakaian UI | Terverifikasi di frontend. Dropdown periode memakai UUID fixture valid, kosong, termin saja, dan skenario galat. |
-| P-11 | Integrasi UI dengan endpoint Laravel | Rizky dan Arinal | Sebagian (Frontend siap). Frontend mencoba fetch ke /api/payroll/v1/rekap-biaya dan otomatis fallback ke adapter fixture transparan jika endpoint belum siap. |
+| P-11 | Integrasi UI dengan endpoint Laravel | Rizky dan Arinal | Terverifikasi 20 Oktober 2026. Frontend fetch langsung ke backend tanpa fallback fixture. Kegagalan koneksi ditampilkan sebagai pesan error nyata. |
 | P-12 | Review konsumen E-2 | Dhaffa | Menunggu balasan. Pengguna menyatakan link repo sudah dikirim. |
 | P-13 | Review F-4 | Dhaffa, koordinasi dengan F-4 | Kesepakatan isi dilaporkan. Perlu kontrak revisi/commit dan pengujian request. |
 | P-14 | Kontrak F-1, F-2, dan F-3 | Dhaffa berkoordinasi dengan tim | Kontrak belum diterima/diperiksa dalam sesi ini. Chat permintaan F-3 telah disusun, pengiriman belum dikonfirmasi. |
 | P-15 | Dokumen kontrak API final | Dhaffa | Direncanakan revisi. File yang diperiksa masih memuat status/tenggat lama. |
 | P-16 | Skenario uji dan laporan demo | Danny | Direncanakan. Template sudah dibaca, hasil demo Laravel belum tersedia. |
-| P-17 | Bukti, README, dan commit demo | Zaki | Direncanakan. Kumpulkan setelah uji aktual dan samakan panduan dengan proyek terbaru. |
+| P-17 | Bukti, README, dan commit demo | Zaki | README web/ diperbarui 20 Oktober 2026 dengan panduan instalasi lengkap. Commit demo dan screenshot masih perlu dikerjakan. |
 | P-18 | Pedoman dan konteks bersama | Dhaffa | Ketiga file disusun di sesi ini. Penempatan pada komputer dan commit/push ke repo belum dikonfirmasi. |
 
 ## Bukti yang sudah diketahui
@@ -142,30 +142,47 @@ Jangan menimpa isi provider yang sudah diubah anggota lain. Konfigurasi ini mena
 Tambahkan catatan berikut setelah sesi kerja. Ubah daftar pekerjaan di atas jika statusnya berubah. Jangan mengisi placeholder sebagai bukti selesai.
 
 ```text
-Tanggal dan jam: 19 Oktober 2026, 21.35 WIB
-Anggota dan branch: Muhamad Rizky (Frontend), branch main
-ID pekerjaan: P-05, P-06, P-07, P-08, P-10, P-11 (Frontend)
+Tanggal dan jam: 20 Oktober 2026, 14.51 WIB
+Anggota dan branch: Muhamad Rizky (Frontend) / Arinal Haq (Backend), branch main
+ID pekerjaan: P-02 (reverifikasi), P-05 (build), P-08, P-09, P-11, P-17 (README)
 Perubahan dan file terkait:
-- web/resources/views/components/layouts/app.blade.php: layout master ERP Anaheim Nimbus sesuai Figma (topbar role demo, sidebar, user demo header, footer UI-K05-09).
-- web/resources/views/components/ui/ (card, stat-card, badge, button): komponen bersama Blade teroptimasi livewire/blaze v1.0.19.
-- web/resources/views/rekap-biaya.blade.php: halaman Rekap Biaya UI-K05-09 memuat 17 field RekapBiaya OpenAPI, dropdown periode fixture, stat cards, tabel rincian biaya, dan 4 penanganan state (loading, empty, success, error).
-- web/resources/js/rekap-biaya.js & web/resources/js/app.js: modul JavaScript pemformatan rupiah di frontend, totalBiaya null tampil "Belum ditetapkan", serta adapter transparan yang mencoba panggil /api/payroll/v1/rekap-biaya dan fallback ke fixture sementara bila backend belum siap.
-- web/routes/web.php: mendaftarkan route /rekap-biaya dan redirect root /.
-Perintah atau skenario yang benar-benar dijalankan:
-- npm run build di web/ -> sukses dalam 576ms (app.css 64.27 kB, app.js 8.21 kB).
-- powershell Invoke-WebRequest http://127.0.0.1:8001/rekap-biaya -> status 200 OK.
-- Uji skenario data:
-  1. Oktober 2026 (Payroll & Termin): Pendapatan Rp7.750.000, Potongan Rp200.000, Gaji Bersih Rp7.485.000, Total Biaya "Belum ditetapkan".
-  2. Periode Kosong: muncul banner adaData false, agregat Rp0, Total Biaya "Belum ditetapkan".
-  3. Termin Saja: Pendapatan Rp0, Termin Rp25.000.000, Total Biaya "Belum ditetapkan".
-  4. Simulasi 404: muncul alert PERIODE_NOT_FOUND dengan HTTP 404.
-  5. Simulasi 400: muncul alert INVALID_PERIODE_ID dengan HTTP 400.
-Hasil aktual: Halaman terbuka lancar, format nominal murni di frontend, seluruh 17 field ditampilkan, dan indikator sumber data transparan ("Adapter Fixture Sementara (Backend belum siap)").
-Lokasi bukti: web/resources/views/rekap-biaya.blade.php, web/resources/js/rekap-biaya.js, build manifest web/public/build/manifest.json.
-Commit yang diuji, jika sudah ada: Perubahan lokal kerja siap commit.
-Hambatan: Driver Playwright otomatis gagal unduh CDN pada subagent internal, namun halaman Laravel port 8001 telah teruji 200 OK dan dapat dibuka langsung via browser lokal di http://127.0.0.1:8001/rekap-biaya.
+- web/resources/js/rekap-biaya.js:
+  (1) Hapus jalur simulasi 401/403 lokal — sekarang selalu fetch ke backend.
+  (2) Pilihan 401 mengirim token invalid-token-demo; pilihan 403 mengirim mock-karyawan (dikenali backend sebagai peran tanpa izin).
+  (3) Hapus fallback fixture otomatis — kegagalan koneksi/jaringan menghasilkan pesan error nyata.
+  (4) Tambah AbortController timeout 10 detik agar loading tidak terkunci terus.
+  (5) Toggle input-custom-container (wrapper <div>) bukan input langsung.
+  (6) Badge indikator kini membedakan koneksi gagal (oranye) dan error HTTP (merah).
+- web/resources/views/rekap-biaya.blade.php:
+  Label opsi 401/403 diperbarui menyebutkan token yang dikirim ke backend.
+  Keterangan status koneksi diperbarui: "Semua request dikirim ke backend Laravel".
+- web/app/Services/RekapBiayaFixtureService.php:
+  UUID pencarian dinormalisasi ke huruf kecil (strtolower) sebelum lookup.
+  UUID huruf besar/kecil sekarang menemukan periode yang sama.
+- web/tests/Feature/ExampleTest.php:
+  Diperbarui: / kini dicek redirect ke /rekap-biaya, bukan 200.
+  Ditambah: uji /rekap-biaya mengembalikan 200.
+- web/tests/Feature/RekapBiayaApiTest.php:
+  Ditambah skenario: token invalid (401), bearer kosong (401), peran tenaga_ahli (403),
+  UUID huruf besar (200), UUID campuran (200), periodeId kosong (400), periodeId hilang (400),
+  periodeId duplikat (400), UUID all-zeros (404), dan verifikasi error tidak berisi field sukses.
+  Total: 19 tes API + 2 tes dasar = 21 tes.
+- web/README.md:
+  Ditulis ulang dari README bawaan Laravel menjadi panduan instalasi proyek lengkap.
+Perintah yang benar-benar dijalankan:
+- php artisan test --no-ansi -> 21 tests, 21 passed, 66 assertions, 7721ms. LULUS.
+- npm run build -> built in 664ms, app.css 49.51 kB, app.js 6.44 kB. LULUS.
+- python -m unittest discover -s tests -v -> Ran 10 tests in 0.706s. OK. LULUS.
+Hasil aktual: Semua 21 tes Laravel dan 10 tes Python lulus. Build aset berhasil.
+Lokasi bukti: Output perintah langsung di terminal (belum disimpan ke folder bukti/).
+Commit yang diuji: Belum dicommit. Perubahan lokal siap untuk diperiksa Zaki sebelum commit.
+Hambatan:
+- Uji browser manual untuk 401/403/timeout belum dilakukan — perlu dicek oleh anggota di laptop lokal.
+- validate_contract.py belum dijalankan pada sesi ini (memerlukan pip install requirements-dev.txt).
+- Commit dan push ke remote belum dilakukan.
 Langkah berikutnya dan pemilik:
-1. Koordinasi dengan Arinal Haq (Backend) untuk pembuatan endpoint Laravel GET /api/payroll/v1/rekap-biaya agar frontend otomatis beralih dari fixture ke backend nyata.
-2. Danny menguji skenario angka pembanding demo.
+1. Zaki: buka http://127.0.0.1:8001/rekap-biaya, coba pilihan 401/403 dan pastikan request terlihat di Network browser. Ambil screenshot sebagai bukti.
+2. Zaki: periksa diff (git diff web/) dan commit perubahan ini setelah diverifikasi.
+3. Danny: uji skenario angka pembanding dari data demo fixture. Catat hasil aktual.
+4. Dhaffa: validasi ulang openapi.yaml dengan validator jika requirements-dev.txt sudah tersedia.
 ```
-

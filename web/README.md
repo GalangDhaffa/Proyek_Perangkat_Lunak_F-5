@@ -1,58 +1,197 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ERP F-5 — Aplikasi Laravel (web/)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi web ERP PT Anaheim Nimbus Universal, Kelompok 5 Kelas F, modul payroll dan rekap biaya.
 
-## About Laravel
+**Catatan penting:** Backend saat ini menggunakan fixture demo dan autentikasi mock. Belum ada integrasi nyata dengan modul F-1 (autentikasi), F-2 (karyawan), F-3 (kehadiran), atau F-4 (cuti). Token demo menggantikan autentikasi F-1 sampai integrasi tersedia.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Prasyarat
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Perangkat lunak | Versi yang diuji | Catatan |
+| --- | --- | --- |
+| PHP | 8.4.15 (via Herd) | PHP 8.2+ diperlukan Laravel 13 |
+| Composer | 2.9.2 | Untuk dependensi PHP |
+| Node.js | 25.2.1 | Untuk build aset frontend |
+| npm | 11.6.2 | Untuk dependensi JS |
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Instalasi awal (clone baru)
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Semua perintah dijalankan di dalam folder `web/` kecuali disebutkan lain.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### 1. Masuk ke folder aplikasi
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+cd web
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 2. Pasang dependensi PHP sesuai lockfile
 
-## Contributing
+```bash
+composer install
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Gunakan `composer install` (bukan `composer update`) agar versi mengikuti `composer.lock`.
 
-## Code of Conduct
+### 3. Buat file konfigurasi lokal
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Jika `.env` belum ada, salin dari contoh:
 
-## Security Vulnerabilities
+```bash
+copy .env.example .env
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Pada macOS/Linux gunakan `cp .env.example .env`.
 
-## License
+### 4. Buat kunci aplikasi (hanya untuk instalasi awal)
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+php artisan key:generate
+```
+
+> **Jangan jalankan `key:generate` jika `.env` sudah memuat `APP_KEY` yang terisi.** Perintah ini hanya untuk instalasi pertama atau jika `.env` masih kosong. Mengganti kunci yang sudah ada akan membatalkan semua sesi yang sedang berjalan.
+
+### 5. Siapkan database SQLite
+
+Aplikasi dikonfigurasi menggunakan SQLite untuk kemudahan demo lokal.
+
+```bash
+# Buat file database jika belum ada
+type nul > database\database.sqlite
+```
+
+Pada macOS/Linux:
+
+```bash
+touch database/database.sqlite
+```
+
+Kemudian jalankan migrasi:
+
+```bash
+php artisan migrate
+```
+
+> **Jangan gunakan `migrate:fresh` sebagai langkah rutin.** Gunakan `migrate:fresh` hanya jika Anda ingin mereset database dari awal secara sengaja.
+
+### 6. Pasang dependensi JavaScript sesuai lockfile
+
+```bash
+npm ci
+```
+
+Gunakan `npm ci` (bukan `npm install`) agar versi mengikuti `package-lock.json`.
+
+---
+
+## Menjalankan untuk pengembangan
+
+### Server Laravel (port 8001)
+
+Port 8001 dipakai agar tidak bertabrakan dengan mock Python di port 8000.
+
+```bash
+php artisan serve --port=8001
+```
+
+Buka browser ke: http://127.0.0.1:8001
+
+### Server Vite (mode pengembangan, opsional)
+
+Jika ingin hot-reload aset saat mengembangkan frontend, jalankan Vite di terminal terpisah:
+
+```bash
+npm run dev
+```
+
+Biarkan kedua terminal (`php artisan serve` dan `npm run dev`) berjalan secara bersamaan.
+
+### Build aset untuk produksi atau verifikasi
+
+```bash
+npm run build
+```
+
+Hasil build tersimpan di `public/build/`. Diperlukan agar aset tersedia tanpa server Vite.
+
+---
+
+## Menjalankan pengujian Laravel
+
+```bash
+php artisan test
+```
+
+Atau secara eksplisit dengan PHPUnit:
+
+```bash
+./vendor/bin/phpunit
+```
+
+Pengujian berada di `web/tests/Feature/`. Terpisah dari pengujian Python di root.
+
+---
+
+## Endpoint API demo
+
+```
+GET /api/payroll/v1/rekap-biaya?periodeId=<UUID>
+Authorization: Bearer <token>
+```
+
+| Token demo | Peran | Akses |
+| --- | --- | --- |
+| `mock-manajemen` | manajemen | Diizinkan (200) |
+| `mock-keuangan` | petugas_keuangan | Diizinkan (200) |
+| `mock-e2` | layanan_e2 | Diizinkan (200) |
+| `mock-karyawan` | karyawan | Ditolak (403) |
+| `mock-tenaga-ahli` | tenaga_ahli | Ditolak (403) |
+| Token lain / kosong | tidak dikenal | Tidak terotorisasi (401) |
+
+### ID periode fixture demo
+
+| Skenario | periodeId |
+| --- | --- |
+| Payroll & termin | `01a1193d-2500-7c04-854b-8bf03c711dde` |
+| Periode kosong | `01a1193d-2500-7c05-854b-8bf03c711dde` |
+| Termin saja | `01a1193d-2500-7c06-854b-8bf03c711dde` |
+
+UUID tidak dikenal tapi format valid → 404. Format salah / kosong / duplikat → 400.
+
+Contoh dengan `curl.exe` di PowerShell:
+
+```powershell
+curl.exe -i -H "Authorization: Bearer mock-e2" "http://127.0.0.1:8001/api/payroll/v1/rekap-biaya?periodeId=01a1193d-2500-7c04-854b-8bf03c711dde"
+```
+
+---
+
+## Catatan teknis
+
+- `totalBiaya` selalu `null` sesuai kontrak draf v0.2 (menunggu kesepakatan Q-17). UI menampilkan "Belum ditetapkan".
+- Bonus sudah termasuk dalam `totalPendapatan`, tidak ditambahkan lagi.
+- `totalPotongan` adalah potongan komponen karyawan di luar BPJS. `totalBpjsKaryawan` dicatat terpisah.
+- Pemformatan rupiah dilakukan di frontend. Nilai JSON berupa angka tanpa pemisah ribuan.
+- UUID pencarian bersifat case-insensitive (huruf besar/kecil dianggap sama).
+
+---
+
+## Struktur folder utama
+
+```
+web/
+├── app/
+│   ├── Http/Controllers/Api/RekapBiayaController.php   # Endpoint rekap
+│   └── Services/RekapBiayaFixtureService.php           # Fixture demo backend
+├── resources/
+│   ├── js/rekap-biaya.js                               # Modul frontend
+│   └── views/rekap-biaya.blade.php                     # Halaman utama
+├── routes/
+│   ├── api.php                                         # Route API
+│   └── web.php                                         # Route halaman
+└── tests/Feature/
+    ├── ExampleTest.php                                 # Uji dasar
+    └── RekapBiayaApiTest.php                           # Uji endpoint rekap
+```

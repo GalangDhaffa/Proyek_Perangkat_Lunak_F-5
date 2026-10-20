@@ -70,7 +70,11 @@ class RekapBiayaFixtureService
             ],
         ];
 
-        return $fixtures[$periodeId] ?? null;
+        // Pencarian case-insensitive: normalisasi UUID ke huruf kecil.
+        // UUID huruf besar/kecil dianggap sama sesuai kontrak dan mock Python.
+        $normalizedId = strtolower($periodeId);
+
+        return $fixtures[$normalizedId] ?? null;
     }
 
     public function isValidUuid(string $value): bool
