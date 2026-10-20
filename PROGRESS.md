@@ -31,7 +31,7 @@ Coding ditangani Muhamad Rizky untuk frontend dan Arinal Haq untuk backend. Dhaf
 | P-05 | npm install, build, dan halaman Laravel | Arinal, Rizky | Terverifikasi ulang 20 Oktober 2026. npm run build sukses (664ms). |
 | P-06 | Pemasangan dan aktivasi Blaze | Arinal dan Rizky, dibantu Dhaffa | Terverifikasi. livewire/blaze v1.0.19 terpasang di vendor, AppServiceProvider memuat Blaze::optimize() untuk views/components/ui, komponen Blade anonim berhasil dirender. |
 | P-07 | Frame Figma dan komponen bersama | Rizky | Terverifikasi. Acuan prototipe Figma UI-K05-01 sampai UI-K05-09 diterima. Layout bersama Anaheim Nimbus dan komponen UI dibuat di components/ui. |
-| P-08 | UI rekap biaya | Rizky | Terverifikasi ulang 20 Oktober 2026. Perbaikan: (1) 401/403 sekarang fetch ke backend nyata, (2) fallback fixture dihapus — kegagalan koneksi menampilkan error nyata, (3) toggle input UUID manual diperbaiki, (4) timeout request 10 detik ditambahkan. |
+| P-08 | UI rekap biaya | Rizky | Terverifikasi ulang 20 Oktober 2026 (16.07 WIB). Rapikan UI: kontrol pengujian dipindah ke panel accordion tertutup, badge "Data demo", teks ringkas untuk pengguna, tombol "Coba lagi" untuk koneksi gagal, hapus label teknis dari tampilan utama. |
 | P-09 | Endpoint rekap Laravel dan akses | Arinal | Terverifikasi. Perbaikan: UUID pencarian sekarang case-insensitive (strtolower). |
 | P-10 | Data demo dan sumber periode | Arinal, Rizky untuk pemakaian UI | Terverifikasi di frontend. Dropdown periode memakai UUID fixture valid, kosong, termin saja, dan skenario galat. |
 | P-11 | Integrasi UI dengan endpoint Laravel | Rizky dan Arinal | Terverifikasi 20 Oktober 2026. Frontend fetch langsung ke backend tanpa fallback fixture. Kegagalan koneksi ditampilkan sebagai pesan error nyata. |
@@ -185,4 +185,20 @@ Langkah berikutnya dan pemilik:
 2. Zaki: periksa diff (git diff web/) dan commit perubahan ini setelah diverifikasi.
 3. Danny: uji skenario angka pembanding dari data demo fixture. Catat hasil aktual.
 4. Dhaffa: validasi ulang openapi.yaml dengan validator jika requirements-dev.txt sudah tersedia.
+```
+
+```text
+Tanggal dan jam: 20 Oktober 2026, 16.07 WIB
+Anggota dan branch: Muhamad Rizky (Frontend), branch main
+ID pekerjaan: P-08 (rapikan UI)
+Perubahan dan file terkait:
+- web/resources/views/rekap-biaya.blade.php: hapus label teknis dari tampilan utama (badge status koneksi, UUID, adaData=false, Q-17, panel metadata), pindah kontrol uji ke panel accordion tertutup, badge 'Data demo', kolom 'Sumber' menjadi 'Keterangan', teks ringkas, tombol 'Coba lagi' untuk error koneksi.
+- web/resources/js/rekap-biaya.js: hapus referensi badge-source, toggle accordion, select-skenario-galat terpisah dari select-periode, pesan error dalam bahasa pengguna, tombol retry hanya untuk connection error, helper setText().
+- web/resources/views/components/layouts/app.blade.php: top bar disederhanakan menjadi penanda 'Data demo', footer hapus kode layar UI-K05-09.
+Perintah yang benar-benar dijalankan:
+- php artisan test --no-ansi: 21 tests, 21 passed, 66 assertions, 743ms. LULUS.
+- npm run build: built in 594ms, app.css 49.68 kB, app.js 6.01 kB. LULUS.
+Hasil aktual: Semua 21 tes lulus. Build berhasil. Tampilan diperbarui tanpa mengubah kontrak API.
+Hambatan: Uji browser manual belum dilakukan. Perlu dicek Zaki di laptop lokal.
+Langkah berikutnya: Zaki uji browser semua skenario, ambil screenshot, lalu commit setelah diverifikasi.
 ```

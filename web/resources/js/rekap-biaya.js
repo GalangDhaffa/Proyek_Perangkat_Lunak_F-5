@@ -1,17 +1,14 @@
 /**
  * Rekap Biaya Frontend Module - ERP PT Anaheim Nimbus Universal (Kelompok 5 F-5)
- * Mematuhi kontrak OpenAPI v0.2 (API-K05-01 / FTR-K05-09 / UI-K05-09).
- *
- * Sumber data: endpoint backend Laravel GET /api/payroll/v1/rekap-biaya
- * Backend menggunakan fixture demo (bukan integrasi F-1/F-2/F-3/F-4 nyata).
- * Autentikasi memakai token mock yang dikenali backend demo.
+ * Kontrak OpenAPI v0.2, endpoint GET /api/payroll/v1/rekap-biaya.
+ * Backend menggunakan fixture demo — bukan integrasi nyata F-1/F-2/F-3/F-4.
  */
 
-/** Batas waktu request ke backend (ms). Mencegah loading terkunci tanpa batas. */
+/** Batas waktu request (ms). Mencegah loading terkunci tanpa batas. */
 const REQUEST_TIMEOUT_MS = 10000;
 
 /**
- * Format angka rupiah sesuai pedoman F-5 (pemformatan di frontend).
+ * Format angka ke rupiah. null → 'Belum ditetapkan'.
  */
 export function formatRupiah(amount) {
     if (amount === null || amount === undefined) {
@@ -21,18 +18,19 @@ export function formatRupiah(amount) {
         style: 'currency',
         currency: 'IDR',
         minimumFractionDigits: 0,
-        maximumFractionDigits: 2
+        maximumFractionDigits: 2,
     }).format(amount).replace(/\s+/g, '');
 }
 
 /**
- * Format tanggal Indonesia ramah pengguna.
+ * Format tanggal ke format Indonesia singkat.
  */
 export function formatTanggal(dateStr) {
-    if (!dateStr) return '-';
+    if (!dateStr) return '—';
     try {
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        return new Date(dateStr).toLocaleDateString('id-ID', {
+            day: '2-digit', month: 'short', year: 'numeric',
+        });
     } catch {
         return dateStr;
     }
@@ -42,66 +40,96 @@ export function formatTanggal(dateStr) {
  * Inisialisasi halaman Rekap Biaya.
  */
 export function initRekapBiaya() {
-    const selectPeriode = document.getElementById('select-periode');
-    const inputCustomContainer = document.getElementById('input-custom-container');
-    const inputCustomUuid = document.getElementById('input-custom-uuid');
-    const selectAuthRole = document.getElementById('select-auth-role');
-    const btnTampilkan = document.getElementById('btn-tampilkan-rekap');
+    // ── Elemen utama ──────────────────────────────────────────────────────────
+    const selectPeriode       = document.getElementById('select-periode');
+    const selectAuthRole      = document.getElementById('select-auth-role');
+    const selectSkenarioGalat = document.getElementById('select-skenario-galat');
+    const inputCustomContainer= document.getElementById('input-custom-container');
+    const inputCustomUuid     = document.getElementById('input-custom-uuid');
+    const btnTampilkan        = document.getElementById('btn-tampilkan-rekap');
 
-    const stateLoading = document.getElementById('state-loading');
-    const stateError = document.getElementById('state-error');
-    const stateEmptyNotice = document.getElementById('state-empty-notice');
-    const stateContent = document.getElementById('state-content');
+    const stateLoading        = document.getElementById('state-loading');
+    const stateError          = document.getElementById('state-error');
+    const stateContent        = document.getElementById('state-content');
+    const stateEmptyNotice    = document.getElementById('state-empty-notice');
 
-    const badgeSource = document.getElementById('badge-source');
+    const btnRetry            = document.getElementById('btn-retry');
+
+    // ── Panel pengujian (accordion) ───────────────────────────────────────────
+    const btnTogglePanelUji   = document.getElementById('btn-toggle-panel-uji');
+    const panelPengujian      = document.getElementById('panel-pengujian');
+    const iconToggleUji       = document.getElementById('icon-toggle-uji');
 
     if (!btnTampilkan || !selectPeriode) return;
 
-    // Toggle pembungkus input UUID manual saat pilihan berubah
-    selectPeriode.addEventListener('change', () => {
-        if (selectPeriode.value === 'custom') {
-            inputCustomContainer.classList.remove('hidden');
-            if (inputCustomUuid) inputCustomUuid.focus();
-        } else {
-            inputCustomContainer.classList.add('hidden');
+    // Toggle panel pengujian
+    if (btnTogglePanelUji && panelPengujian) {
+        btnTogglePanelUji.addEventListener('click', () => {
+            const isOpen = !panelPengujian.classList.contains('hidden');
+            panelPengujian.classList.toggle('hidden', isOpen);
+            btnTogglePanelUji.setAttribute('aria-expanded', String(!isOpen));
+            if (iconToggleUji) {
+                iconToggleUji.style.transform = isOpen ? '' : 'rotate(90deg)';
+            }
+        });
+    }
+
+    // Toggle input UUID manual dari select skenario galat
+    if (selectSkenarioGalat) {
+        selectSkenarioGalat.addEventListener('change', () => {
+            const show = selectSkenarioGalat.value === 'custom';
+            inputCustomContainer.classList.toggle('hidden', !show);
+            if (show && inputCustomUuid) inputCustomUuid.focus();
+        });
+    }
+
+    // Tombol "Coba lagi" — jalankan ulang request terakhir
+    if (btnRetry) {
+        btnRetry.addEventListener('click', loadRekap);
+    }
+
+    // ── Logika utama ─────────────────────────────────────────────────────────
+
+    /** Tentukan periodeId yang akan dikirim ke backend. */
+    function resolvePeriodeId() {
+        // Jika panel uji terbuka dan ada skenario galat dipilih, pakai itu
+        if (selectSkenarioGalat && selectSkenarioGalat.value !== '') {
+            if (selectSkenarioGalat.value === 'custom') {
+                return inputCustomUuid ? inputCustomUuid.value.trim() : '';
+            }
+            return selectSkenarioGalat.value;
         }
-    });
+        return selectPeriode.value;
+    }
+
+    /** Petakan pilihan peran ke token mock yang dikenali backend demo. */
+    function resolveToken() {
+        const role = selectAuthRole ? selectAuthRole.value : 'manajemen';
+        const MAP = {
+            manajemen:        'mock-manajemen',
+            petugas_keuangan: 'mock-keuangan',
+            layanan_e2:       'mock-e2',
+            unauthorized:     'invalid-token-demo',
+            // mock-karyawan dikenali backend sebagai peran yang tidak diizinkan → 403
+            forbidden:        'mock-karyawan',
+        };
+        return MAP[role] ?? 'mock-manajemen';
+    }
 
     async function loadRekap() {
-        let periodeId = selectPeriode.value;
-        if (periodeId === 'custom') {
-            periodeId = inputCustomUuid ? inputCustomUuid.value.trim() : '';
-        }
+        const periodeId = resolvePeriodeId();
+        const token     = resolveToken();
 
-        // Petakan pilihan peran ke token mock yang dikenali backend
-        const authRole = selectAuthRole ? selectAuthRole.value : 'manajemen';
-        let token;
-        if (authRole === 'manajemen') token = 'mock-manajemen';
-        else if (authRole === 'petugas_keuangan') token = 'mock-keuangan';
-        else if (authRole === 'layanan_e2') token = 'mock-e2';
-        else if (authRole === 'unauthorized') token = 'invalid-token-demo';
-        // 403: kirim token mock-karyawan yang dikenali backend sebagai peran tanpa izin
-        else if (authRole === 'forbidden') token = 'mock-karyawan';
-        else token = 'mock-manajemen';
-
-        // Sembunyikan hasil sebelumnya dan tampilkan loading
+        // Sembunyikan semua state sebelumnya, tampilkan loading
         stateLoading.classList.remove('hidden');
         stateError.classList.add('hidden');
         stateContent.classList.add('hidden');
         btnTampilkan.disabled = true;
-
-        // Update badge ke "Menghubungkan..." saat request dimulai
-        if (badgeSource) {
-            badgeSource.textContent = 'Menghubungkan ke backend...';
-            badgeSource.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200';
-        }
-
-        const SOURCE_LABEL = 'Backend Laravel (/api/payroll/v1/rekap-biaya)';
+        if (btnRetry) btnRetry.classList.add('hidden');
 
         try {
-            // Buat AbortController untuk batas waktu request
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+            const timeoutId  = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
             let response;
             try {
@@ -120,166 +148,193 @@ export function initRekapBiaya() {
                 clearTimeout(timeoutId);
             }
 
-            // Periksa content-type. Respons HTML (mis. halaman 404 Laravel) bukan JSON valid.
             const contentType = response.headers.get('content-type') || '';
             if (!contentType.includes('application/json')) {
+                // Server merespons HTML bukan JSON — kemungkinan server belum siap
                 showError({
-                    code: 'INVALID_RESPONSE',
-                    message: `Backend mengembalikan respons bukan JSON (${response.status}). Pastikan server Laravel berjalan dan route terdaftar.`,
+                    code: 'SERVER_ERROR',
+                    message: 'Server tidak merespons dengan benar. Pastikan aplikasi sudah berjalan.',
                     details: [],
-                }, response.status || 0, SOURCE_LABEL, true);
+                }, response.status || 0, true);
                 return;
             }
 
             const json = await response.json();
 
             if (response.ok) {
-                renderSuccess(json, SOURCE_LABEL);
+                renderSuccess(json);
             } else {
-                // Error resmi dari backend sesuai schema ErrorResponse (400/401/403/404)
-                showError(json, response.status, SOURCE_LABEL, false);
+                // Error resmi 400 / 401 / 403 / 404 dari backend
+                showError(json, response.status, false);
             }
 
         } catch (err) {
-            // Koneksi gagal, batas waktu habis, atau kesalahan jaringan — tampilkan kegagalan nyata
-            let message;
-            if (err.name === 'AbortError') {
-                message = `Request timeout setelah ${REQUEST_TIMEOUT_MS / 1000} detik. Periksa apakah server Laravel berjalan di port 8001.`;
-            } else {
-                message = `Koneksi ke backend gagal: ${err.message || 'Network error'}. Pastikan server Laravel berjalan di http://127.0.0.1:8001.`;
-            }
+            const isTimeout = err.name === 'AbortError';
             showError({
                 code: 'CONNECTION_ERROR',
-                message,
+                message: isTimeout
+                    ? 'Permintaan memakan waktu terlalu lama. Periksa koneksi dan coba lagi.'
+                    : 'Tidak dapat terhubung ke server. Periksa koneksi dan coba lagi.',
                 details: [],
-            }, 0, SOURCE_LABEL, true);
+            }, 0, true);
         } finally {
             stateLoading.classList.add('hidden');
             btnTampilkan.disabled = false;
         }
     }
 
-    function renderSuccess(data, sourceLabel) {
+    // ── Render sukses ─────────────────────────────────────────────────────────
+
+    function renderSuccess(data) {
         stateContent.classList.remove('hidden');
         stateError.classList.add('hidden');
 
-        // Update indikator sumber data — hijau untuk backend berhasil
-        if (badgeSource) {
-            badgeSource.textContent = sourceLabel;
-            badgeSource.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
-        }
+        // Header periode
+        const elNama = document.getElementById('view-nama-periode');
+        if (elNama) elNama.textContent = data.namaPeriode || '—';
 
-        // Teks periode header & status
-        document.getElementById('view-nama-periode').textContent = data.namaPeriode;
-        document.getElementById('view-tanggal-rentang').textContent = `${formatTanggal(data.tanggalMulai)} s.d. ${formatTanggal(data.tanggalAkhir)}`;
-        document.getElementById('view-diperbarui-pada').textContent = data.diperbaruiPada ? data.diperbaruiPada.replace('T', ' ').substring(0, 19) + ' WIB' : '-';
-        document.getElementById('view-periode-id').textContent = data.periodeId;
+        const elRentang = document.getElementById('view-tanggal-rentang');
+        if (elRentang) elRentang.textContent =
+            `${formatTanggal(data.tanggalMulai)} s.d. ${formatTanggal(data.tanggalAkhir)}`;
 
-        // Badge Status Periode
+        const elDiperbarui = document.getElementById('view-diperbarui-pada');
+        if (elDiperbarui) elDiperbarui.textContent = data.diperbaruiPada
+            ? data.diperbaruiPada.replace('T', ' ').substring(0, 19) + ' WIB'
+            : '—';
+
+        // Badge status periode
         const badgeStatus = document.getElementById('view-status-periode');
-        badgeStatus.textContent = data.statusPeriode;
-        if (data.statusPeriode === 'Disetujui') {
-            badgeStatus.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
-        } else if (data.statusPeriode === 'Dihitung') {
-            badgeStatus.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200';
-        } else if (data.statusPeriode === 'Menunggu Persetujuan') {
-            badgeStatus.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200';
-        } else {
-            badgeStatus.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200';
+        if (badgeStatus) {
+            badgeStatus.textContent = data.statusPeriode || '—';
+            const COLOR = {
+                'Disetujui':           'bg-emerald-50 text-emerald-700 border-emerald-200',
+                'Dihitung':            'bg-blue-50 text-blue-700 border-blue-200',
+                'Menunggu Persetujuan':'bg-amber-50 text-amber-700 border-amber-200',
+            };
+            const cls = COLOR[data.statusPeriode] ?? 'bg-slate-100 text-slate-700 border-slate-200';
+            badgeStatus.className = `px-2.5 py-0.5 rounded-full text-xs font-semibold border ${cls}`;
         }
 
-        // Banner Periode Kosong (adaData: false)
-        if (!data.adaData) {
-            stateEmptyNotice.classList.remove('hidden');
-        } else {
-            stateEmptyNotice.classList.add('hidden');
+        // Banner periode kosong
+        if (stateEmptyNotice) {
+            stateEmptyNotice.classList.toggle('hidden', !!data.adaData);
         }
 
-        // 3 Stat Cards Utama (Sesuai Figma)
-        document.getElementById('stat-pendapatan').textContent = formatRupiah(data.totalPendapatan);
-        document.getElementById('stat-pendapatan-subtext').textContent = `Termasuk bonus ${formatRupiah(data.totalBonus)}`;
+        // Stat cards
+        setText('stat-pendapatan', formatRupiah(data.totalPendapatan));
+        setText('stat-pendapatan-subtext', `Termasuk bonus ${formatRupiah(data.totalBonus)}`);
+        setText('stat-potongan', formatRupiah(data.totalPotongan));
+        setText('stat-potongan-subtext', `BPJS karyawan ${formatRupiah(data.totalBpjsKaryawan)} dicatat terpisah`);
+        setText('stat-gajibersih', formatRupiah(data.totalGajiBersih));
 
-        document.getElementById('stat-potongan').textContent = formatRupiah(data.totalPotongan);
-        document.getElementById('stat-potongan-subtext').textContent = `BPJS karyawan ${formatRupiah(data.totalBpjsKaryawan)} dicatat terpisah`;
-
-        document.getElementById('stat-gajibersih').textContent = formatRupiah(data.totalGajiBersih);
-
-        // Tabel Rincian Biaya (17 Field Agregat)
-        document.getElementById('row-pendapatan').textContent = formatRupiah(data.totalPendapatan);
-        document.getElementById('row-pendapatan-sumber').textContent = `Hasil payroll (${data.jumlahKaryawan} karyawan)`;
-
-        document.getElementById('row-bonus').textContent = formatRupiah(data.totalBonus);
-        document.getElementById('row-potongan').textContent = formatRupiah(data.totalPotongan);
-        document.getElementById('row-bpjs-karyawan').textContent = formatRupiah(data.totalBpjsKaryawan);
-        document.getElementById('row-gaji-bersih').textContent = formatRupiah(data.totalGajiBersih);
-        document.getElementById('row-bpjs-perusahaan').textContent = formatRupiah(data.totalBpjsPerusahaan);
-
-        document.getElementById('row-termin').textContent = formatRupiah(data.totalTermin);
-        document.getElementById('row-termin-sumber').textContent = `Kontrak contoh · Terpisah (${data.jumlahTermin} termin)`;
-
-        // Total biaya: WAJIB tampil 'Belum ditetapkan' jika null sesuai kontrak draf v0.2
-        const totalBiayaEl = document.getElementById('row-total-biaya');
-        if (data.totalBiaya === null) {
-            totalBiayaEl.textContent = 'Belum ditetapkan';
-            totalBiayaEl.className = 'text-slate-500 font-medium italic';
-        } else {
-            totalBiayaEl.textContent = formatRupiah(data.totalBiaya);
-            totalBiayaEl.className = 'text-slate-900 font-bold';
+        // Ringkasan karyawan & termin di header tabel
+        const elRingkasan = document.getElementById('view-ringkasan-karyawan-termin');
+        if (elRingkasan) {
+            const parts = [];
+            if (data.jumlahKaryawan > 0) parts.push(`${data.jumlahKaryawan} karyawan`);
+            if (data.jumlahTermin > 0)   parts.push(`${data.jumlahTermin} termin`);
+            elRingkasan.textContent = parts.length ? parts.join(' · ') : '';
         }
 
-        // Field Metadata
-        document.getElementById('meta-ada-data').textContent = data.adaData ? 'Tersedia' : 'Kosong (false)';
-        document.getElementById('meta-jumlah-karyawan').textContent = `${data.jumlahKaryawan} orang`;
-        document.getElementById('meta-jumlah-termin').textContent = `${data.jumlahTermin} termin`;
+        // Baris tabel
+        setText('row-pendapatan', formatRupiah(data.totalPendapatan));
+        setText('row-bonus', formatRupiah(data.totalBonus));
+        setText('row-potongan', formatRupiah(data.totalPotongan));
+        setText('row-bpjs-karyawan', formatRupiah(data.totalBpjsKaryawan));
+        setText('row-gaji-bersih', formatRupiah(data.totalGajiBersih));
+        setText('row-bpjs-perusahaan', formatRupiah(data.totalBpjsPerusahaan));
+        setText('row-termin', formatRupiah(data.totalTermin));
+
+        const elTerminKet = document.getElementById('row-termin-keterangan');
+        if (elTerminKet) {
+            elTerminKet.textContent = data.jumlahTermin > 0
+                ? `${data.jumlahTermin} termin pada periode ini`
+                : 'Tidak ada pembayaran termin';
+        }
+
+        // Total biaya — selalu null pada kontrak v0.2
+        const elTotalBiaya = document.getElementById('row-total-biaya');
+        if (elTotalBiaya) {
+            if (data.totalBiaya === null) {
+                elTotalBiaya.textContent = 'Belum ditetapkan';
+                elTotalBiaya.className = 'py-4 text-right pr-6 italic text-slate-400 font-medium';
+            } else {
+                elTotalBiaya.textContent = formatRupiah(data.totalBiaya);
+                elTotalBiaya.className = 'py-4 text-right pr-6 font-bold text-slate-900';
+            }
+        }
     }
 
+    // ── Render error ──────────────────────────────────────────────────────────
+
     /**
-     * Tampilkan state error dan sembunyikan konten sukses sebelumnya.
-     * @param {object} errData - Objek error dari backend (code, message, details)
-     * @param {number} httpStatus - Kode status HTTP
-     * @param {string} sourceLabel - Label sumber data untuk badge
-     * @param {boolean} isConnectionError - true jika kegagalan di sisi koneksi/jaringan
+     * Tampilkan state error, sembunyikan konten sukses sebelumnya.
+     * @param {object}  errData          - { code, message, details[] }
+     * @param {number}  httpStatus       - Kode HTTP (0 = koneksi gagal)
+     * @param {boolean} isConnectionError- true untuk gangguan jaringan/timeout
      */
-    function showError(errData, httpStatus, sourceLabel, isConnectionError = false) {
-        // Pastikan konten sukses sebelumnya disembunyikan
+    function showError(errData, httpStatus, isConnectionError = false) {
         stateContent.classList.add('hidden');
         stateError.classList.remove('hidden');
 
-        if (badgeSource) {
-            badgeSource.textContent = sourceLabel;
-            if (isConnectionError) {
-                badgeSource.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-orange-50 text-orange-700 border border-orange-200';
+        // Pesan error yang mudah dipahami pengguna
+        const USER_MESSAGES = {
+            UNAUTHORIZED:      'Akses ditolak. Token tidak valid atau sesi sudah berakhir.',
+            FORBIDDEN:         'Anda tidak memiliki izin untuk melihat rekap biaya periode ini.',
+            PERIODE_NOT_FOUND: 'Periode tidak ditemukan. Pilih periode lain atau periksa UUID yang dimasukkan.',
+            INVALID_PERIODE_ID:'Format periode tidak valid. Pilih dari daftar atau masukkan UUID yang benar.',
+        };
+
+        const elCode    = document.getElementById('error-code');
+        const elStatus  = document.getElementById('error-http-status');
+        const elMessage = document.getElementById('error-message');
+        const elDetails = document.getElementById('error-details');
+
+        if (elCode) elCode.textContent = errData.code || (httpStatus > 0 ? `HTTP ${httpStatus}` : 'Error');
+        if (elStatus) elStatus.textContent = httpStatus > 0 ? `HTTP ${httpStatus}` : '';
+
+        const userMsg = USER_MESSAGES[errData.code] || errData.message || 'Terjadi kesalahan pada permintaan rekap.';
+        if (elMessage) elMessage.textContent = userMsg;
+
+        if (elDetails) {
+            elDetails.innerHTML = '';
+            // Tampilkan detail hanya jika berguna untuk pengguna (bukan pesan teknis internal)
+            const showableDetails = (errData.details || []).filter(d => d.message && !d.message.includes('8-4-4'));
+            if (showableDetails.length) {
+                showableDetails.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'text-xs text-rose-700';
+                    li.textContent = item.message;
+                    elDetails.appendChild(li);
+                });
+                elDetails.classList.remove('hidden');
             } else {
-                badgeSource.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200';
+                elDetails.classList.add('hidden');
             }
         }
 
-        document.getElementById('error-code').textContent = errData.code || `HTTP_${httpStatus}`;
-        document.getElementById('error-http-status').textContent = httpStatus > 0 ? `HTTP ${httpStatus}` : 'Koneksi gagal';
-        document.getElementById('error-message').textContent = errData.message || 'Terjadi kesalahan pada permintaan rekap.';
-
-        const detailsEl = document.getElementById('error-details');
-        detailsEl.innerHTML = '';
-        if (errData.details && errData.details.length > 0) {
-            errData.details.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'text-xs text-rose-700';
-                li.textContent = item.field ? `[${item.field}] ${item.message}` : item.message;
-                detailsEl.appendChild(li);
-            });
-            detailsEl.classList.remove('hidden');
-        } else {
-            detailsEl.classList.add('hidden');
+        // Tombol "Coba lagi" hanya untuk gangguan koneksi
+        if (btnRetry) {
+            btnRetry.classList.toggle('hidden', !isConnectionError);
         }
     }
 
+    // ── Helper ────────────────────────────────────────────────────────────────
+
+    function setText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+    }
+
+    // ── Inisialisasi ──────────────────────────────────────────────────────────
+
     btnTampilkan.addEventListener('click', loadRekap);
 
-    // Otomatis muat saat pertama kali halaman terbuka
+    // Muat otomatis saat halaman pertama kali dibuka
     loadRekap();
 }
 
-// Inisialisasi saat DOM siap
+// Jalankan setelah DOM siap
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initRekapBiaya);
 } else {
