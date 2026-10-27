@@ -41,9 +41,69 @@ class RekapBiayaController extends Controller
             return $this->invalidPeriodoId();
         }
 
-        $payload = $this->fixtureService->getByPeriodoId($periodeId);
+        $dbPeriod = null;
+        if (\Illuminate\Support\Facades\Schema::hasTable('payroll_periods')) {
+            $normalizedId = strtolower($periodeId);
+            $dbPeriod = \App\Models\PayrollPeriod::whereRaw('LOWER(id) = ?', [$normalizedId])
+                ->orWhereRaw('LOWER(uuid) = ?', [$normalizedId])
+                ->first();
+        }
 
-        if ($payload === null) {
+        $fixture = $this->fixtureService->getByPeriodoId($periodeId);
+
+        if ($dbPeriod !== null) {
+            $metaId = (string) ($dbPeriod->uuid ?: $dbPeriod->id);
+            $metaNama = $dbPeriod->nama_periode ?: \App\Models\PayrollPeriod::generateNamaPeriode($dbPeriod->tanggal_mulai);
+            $metaMulai = \Carbon\Carbon::parse($dbPeriod->tanggal_mulai)->format('Y-m-d');
+            $metaAkhir = \Carbon\Carbon::parse($dbPeriod->tanggal_akhir)->format('Y-m-d');
+            $metaStatus = $dbPeriod->status ?: 'Draf';
+
+            if ($fixture !== null) {
+                // Gunakan metadata dari database yang telah diselaraskan dengan agregat demo fixture
+                $payload = [
+                    'periodeId' => $metaId,
+                    'namaPeriode' => $metaNama,
+                    'tanggalMulai' => $metaMulai,
+                    'tanggalAkhir' => $metaAkhir,
+                    'statusPeriode' => $metaStatus,
+                    'adaData' => $fixture['adaData'],
+                    'jumlahKaryawan' => $fixture['jumlahKaryawan'],
+                    'totalPendapatan' => $fixture['totalPendapatan'],
+                    'totalBonus' => $fixture['totalBonus'],
+                    'totalPotongan' => $fixture['totalPotongan'],
+                    'totalBpjsKaryawan' => $fixture['totalBpjsKaryawan'],
+                    'totalGajiBersih' => $fixture['totalGajiBersih'],
+                    'totalBpjsPerusahaan' => $fixture['totalBpjsPerusahaan'],
+                    'totalTermin' => $fixture['totalTermin'],
+                    'jumlahTermin' => $fixture['jumlahTermin'],
+                    'totalBiaya' => null,
+                    'diperbaruiPada' => $fixture['diperbaruiPada'],
+                ];
+            } else {
+                // Periode baru di database tanpa transaksi payroll/termin
+                $payload = [
+                    'periodeId' => $metaId,
+                    'namaPeriode' => $metaNama,
+                    'tanggalMulai' => $metaMulai,
+                    'tanggalAkhir' => $metaAkhir,
+                    'statusPeriode' => $metaStatus,
+                    'adaData' => false,
+                    'jumlahKaryawan' => 0,
+                    'totalPendapatan' => 0.0,
+                    'totalBonus' => 0.0,
+                    'totalPotongan' => 0.0,
+                    'totalBpjsKaryawan' => 0.0,
+                    'totalGajiBersih' => 0.0,
+                    'totalBpjsPerusahaan' => 0.0,
+                    'totalTermin' => 0.0,
+                    'jumlahTermin' => 0,
+                    'totalBiaya' => null,
+                    'diperbaruiPada' => now()->timezone('+07:00')->toIso8601String(),
+                ];
+            }
+        } elseif ($fixture !== null) {
+            $payload = $fixture;
+        } else {
             return $this->periodNotFound();
         }
 

@@ -42,6 +42,7 @@ Coding ditangani Muhamad Rizky untuk frontend dan Arinal Haq untuk backend. Dhaf
 | P-16 | Skenario uji dan laporan demo | Danny | Direncanakan. Template sudah dibaca, hasil demo Laravel belum tersedia. |
 | P-17 | Bukti, README, dan commit demo | Zaki | README web/ diperbarui 20 Oktober 2026 dengan panduan instalasi lengkap. Commit demo dan screenshot masih perlu dikerjakan. |
 | P-18 | Pedoman dan konteks bersama | Dhaffa | Ketiga file disusun di sesi ini. Penempatan pada komputer dan commit/push ke repo belum dikonfirmasi. |
+| P-19 | Fitur Periode Payroll (FTR-K05-01 / UI-K05-01) | Arinal (Backend) & Rizky (Frontend) | Terverifikasi 27 Oktober 2026. Database SQLite, Model Eloquent, REST API CRUD, validasi, otorisasi peran, UI lengkap dengan form tambah, edit, detail, validasi interaktif, sinkronisasi Rekap Biaya, 35 tes Laravel lulus, OpenAPI YAML/JSON tervalidasi. |
 
 ## Bukti yang sudah diketahui
 
@@ -202,3 +203,105 @@ Hasil aktual: Semua 21 tes lulus. Build berhasil. Tampilan diperbarui tanpa meng
 Hambatan: Uji browser manual belum dilakukan. Perlu dicek Zaki di laptop lokal.
 Langkah berikutnya: Zaki uji browser semua skenario, ambil screenshot, lalu commit setelah diverifikasi.
 ```
+
+```text
+Tanggal dan jam: 27 Oktober 2026, 21.25 WIB
+Anggota dan branch: Muhamad Rizky (Frontend) & Arinal Haq (Backend), branch main
+ID pekerjaan: P-19 (Fitur Periode Payroll: FTR-K05-01, UI-K05-01, API-K05-02 s.d API-K05-05)
+Perubahan dan file terkait:
+- web/database/migrations/2026_10_27_130759_create_payroll_periods_table.php & 2026_10_27_140000_add_fields_to_payroll_periods_table.php:
+  Skema tabel payroll_periods dengan UUID string sebagai primary key, nama_periode, tanggal_mulai, tanggal_akhir, tanggal_pembayaran, dan status default 'Draf'.
+- web/database/seeders/PayrollPeriodSeeder.php:
+  Seeder untuk mengisi periode default (September 2026) dan periode contoh ke database SQLite.
+- web/app/Models/PayrollPeriod.php:
+  Model Eloquent dengan auto-UUID, auto-nama_periode dari tanggal mulai, casting tanggal, dan toResponseArray() standar kontrak.
+- web/app/Http/Controllers/Api/PayrollPeriodController.php:
+  Controller REST API lengkap untuk:
+  (1) GET /api/payroll/v1/periode (daftar periode dari DB)
+  (2) GET /api/payroll/v1/periode/{id} (detail record periode dari DB)
+  (3) POST /api/payroll/v1/periode (buat periode baru, otorisasi tulis petugas/admin payroll, status Draf, UUID baru)
+  (4) PUT /api/payroll/v1/periode/{id} (perbarui tanggal periode tanpa mengubah UUID)
+  Validasi 3 kolom wajib, format YYYY-MM-DD, tanggal akhir tidak boleh mendahului tanggal mulai, respons kesalahan 422 per-field.
+- web/app/Http/Controllers/Api/RekapBiayaController.php:
+  Integrasi pencarian database ketika periodeId tidak ditemukan di fixture demo. Periode baru mengembalikan 200 dengan adaData: false, agregat 0, dan totalBiaya null sesuai spesifikasi data kosong.
+- web/resources/views/periode-payroll.blade.php & components/layouts/app.blade.php:
+  Halaman Blade UI-K05-01 sesuai desain paket referensi: header, dropdown periode dari DB, tombol '+ Periode baru', panel detail readonly, form edit/tambah, tombol 'Ubah periode', 'Simpan periode', 'Simpan perubahan', dan 'Batal', badge status Draf, alert pesan sukses/gagal, dan link navigasi sidebar aktif.
+- web/resources/js/periode-payroll.js & app.js & rekap-biaya.js:
+  Logika UI interaktif, validasi client-side, cegah double submit (spinner & disabled), request fetch asinkron ke REST API backend, dan sinkronisasi dropdown Rekap Biaya dengan periode database.
+- web/tests/Feature/PayrollPeriodApiTest.php:
+  14 skenario feature test lengkap mencakup akses halaman, autentikasi 401, daftar periode 200, detail 200, UUID salah 400, not found 404, simpan 201, edit record sama 200, persistensi request berikutnya, validasi kolom kosong 422, validasi urutan tanggal 422, penolakan rollback DB, proteksi hak tulis peran 403, dan integrasi Rekap Biaya.
+- openapi.yaml & openapi.json:
+  Penambahan dokumentasi operasi GET /periode, POST /periode, GET /periode/{id}, PUT /periode/{id}, tag Periode Payroll, schema PeriodePayroll & PeriodePayrollInput, serta kode galat VALIDATION_ERROR.
+- web/README.md:
+  Dokumentasi lengkap endpoint periode, pembagian hak peran baca/tulis, seeder, dan struktur folder.
+Perintah yang benar-benar dijalankan:
+- php artisan test --no-ansi -> 35 tests, 35 passed, 126 assertions. LULUS (100%).
+- python -m unittest discover -s tests -v -> Ran 10 tests. OK. LULUS (100%).
+- python validate_contract.py -> LULUS OpenAPI 3.0.3, referensi skema, format, YAML/JSON, dan contoh respons.
+- npm run build -> built in 510ms, app-L_QfzFtY.css 51.34 kB, app-CVwBXL5C.js 14.73 kB. LULUS.
+- Uji live HTTP port 8001:
+  * GET http://127.0.0.1:8001/periode-payroll -> HTTP 200 OK.
+  * GET /api/payroll/v1/periode -> HTTP 200 OK (5 periode dari SQLite DB).
+  * POST /api/payroll/v1/periode (valid) -> HTTP 201 Created (UUID diterbitkan, status Draf).
+  * GET /api/payroll/v1/periode/{id} -> HTTP 200 OK (data persis sesuai DB).
+  * PUT /api/payroll/v1/periode/{id} -> HTTP 200 OK (tanggal bayar terupdate, UUID tetap sama).
+  * POST /api/payroll/v1/periode (validasi gagal) -> HTTP 422 VALIDATION_ERROR.
+  * POST /api/payroll/v1/periode (token karyawan) -> HTTP 403 FORBIDDEN.
+  * GET /api/payroll/v1/rekap-biaya?periodeId={id} -> HTTP 200 OK (adaData: false, totalBiaya: null).
+Hasil aktual: Seluruh 35 pengujian Laravel dan 10 tes Python lulus. Kontrak OpenAPI sinkron dan valid. Alur tambah, edit, validasi, dan penyimpanan database berjalan sempurna di port 8001.
+Lokasi bukti: Output perintah di terminal dan tes fitur di web/tests/Feature/PayrollPeriodApiTest.php.
+Commit yang diuji: Siap untuk ditinjau Zaki sebelum commit. Tidak ada commit/push otomatis.
+Hambatan: Tidak ada hambatan teknis. Semua fungsionalitas backlog FTR-K05-01 dan UI-K05-01 berjalan.
+Langkah berikutnya:
+1. Zaki: tinjau halaman http://127.0.0.1:8001/periode-payroll di browser, ambil screenshot untuk bukti laporan pertemuan 5.
+2. Zaki: periksa diff (git status dan git diff) dan lakukan commit terverifikasi.
+```
+
+```text
+Tanggal dan jam: 27 Oktober 2026, 22.15 WIB
+Anggota dan branch: Muhamad Rizky (Frontend) & Arinal Haq (Backend), branch main
+ID pekerjaan: P-19 (Penyempurnaan Bug Periode Payroll & Rekap Biaya)
+Perubahan dan file terkait:
+- web/resources/js/periode-payroll.js:
+  1. Diterapkan fungsi standar normalizePeriod() untuk data Blade awal, respons GET list, GET detail, dan POST/PUT/PATCH.
+  2. Mempertahankan pemetaan nama_periode, tanggal_mulai, tanggal_akhir, tanggal_pembayaran, dan status dari field camelCase maupun snake_case.
+  3. Menambahkan pelindung late-arriving GET response agar respons asinkron awal tidak menimpa form ketika pengguna sedang mengetik atau berada dalam mode tambah/edit.
+  4. Memperbaiki pengelolaan display tombol untuk menghindari tabrakan class Tailwind (hidden vs inline-flex) menggunakan setDisplay() eksplisit.
+  5. Menampilkan satu tanda tambah saja pada tombol '+ Periode baru'.
+  6. Menampilkan status dinamis sesuai record terpilih ("Periode tersimpan dengan status [status]").
+  7. Penanganan error dan umpan balik kesalahan API secara jelas dengan mempertahankan input saat gagal.
+- web/resources/views/periode-payroll.blade.php:
+  1. Mode detail: tombol Ubah periode aktif, tombol Batal dan Simpan disembunyikan.
+  2. Mode tambah: tombol Batal dan Simpan periode aktif.
+  3. Mode edit: tombol Batal dan Simpan perubahan aktif.
+  4. Tombol 'Periode baru' menggunakan satu tanda tambah tanpa duplikasi teks dan ikon.
+- web/app/Http/Controllers/Api/PayrollPeriodController.php:
+  1. Validasi tipe data ketat: array, objek, boolean, angka, dan null ditolak dengan 422 VALIDATION_ERROR.
+  2. Validasi tanggal kalender valid YYYY-MM-DD menggunakan checkdate().
+  3. Whitelist atribut ketat: properti tambahan yang tidak diizinkan ditolak dengan 422 tanpa mengubah database.
+  4. Dukungan PATCH parsial dengan validasi minimal 1 field tanggal diizinkan dan evaluasi urutan tanggal akhir vs tanggal mulai pada keadaan akhir record.
+  5. Mempertahankan UUID dan timestamp record saat gagal.
+- web/app/Http/Controllers/Api/RekapBiayaController.php:
+  1. Sinkronisasi metadata periode: jika periodeId terdapat di database SQLite, metadata periodeId, namaPeriode, tanggalMulai, tanggalAkhir, dan statusPeriode diambil langsung dari database.
+  2. Transaksi keuangan pada UUID contoh tetap mempertahankan data agregat demo dan totalBiaya null.
+  3. Periode database baru tanpa transaksi mengembalikan respons kosong adaData false dengan agregat 0 dan totalBiaya null.
+- openapi.yaml & openapi.json:
+  1. Dokumentasi resmi endpoint PATCH /api/payroll/v1/periode/{periodeId}.
+  2. Skema request terpisah: PeriodePayrollInput (wajib 3 tanggal untuk POST/PUT) dan PeriodePayrollPatchInput (parsial untuk PATCH).
+  3. additionalProperties: false ditegakkan pada skema request.
+  4. Kontrak YAML dan JSON dijamin identik dan tervalidasi.
+- web/tests/Feature/PayrollPeriodApiTest.php:
+  Ditambahkan tes regresi untuk validasi tipe data non-string (array, bool, int, obj), tanggal kalender tidak valid (2026-02-30), penolakan additional properties (422), validasi PATCH parsial end-state, konsistensi metadata Rekap Biaya setelah periode diperbarui di database, dan pengujian otorisasi peran tulis.
+Perintah yang benar-benar dijalankan:
+- php ./vendor/bin/phpunit -> 42 tests, 42 passed, 147 assertions. LULUS (100%).
+- python -m unittest discover -s tests -v -> 10 tests. OK. LULUS (100%).
+- python validate_contract.py -> LULUS OpenAPI 3.0.3, referensi skema, format, YAML/JSON, dan contoh respons.
+- npm run build -> built in 530ms, app-B1asU7YU.css 50.62 kB, app-Ce1MufCB.js 14.99 kB. LULUS.
+Hasil aktual: 42 unit/feature test Laravel dan 10 test Python berhasil tanpa error. OpenAPI valid dan identik. Aset frontend ter-bundle dengan sempurna.
+Lokasi bukti: web/tests/Feature/PayrollPeriodApiTest.php dan terminal log.
+Hambatan: Tidak ada hambatan teknis. Semua 5 poin perbaikan pengguna telah diselesaikan.
+Langkah berikutnya:
+1. Zaki: lakukan uji verifikasi manual melalui browser ke http://127.0.0.1:8001/periode-payroll dan http://127.0.0.1:8001/rekap-biaya.
+2. Zaki: periksa git status dan git diff, lalu lakukan commit manual.
+```
+

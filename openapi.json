@@ -15,6 +15,10 @@
     {
       "name": "Rekap Biaya",
       "description": "Agregat payroll dan pembayaran termin per periode."
+    },
+    {
+      "name": "Periode Payroll",
+      "description": "Pengelolaan dan penyiapan periode payroll (FTR-K05-01 / UI-K05-01)."
     }
   ],
   "security": [
@@ -237,6 +241,471 @@
           }
         }
       }
+    },
+    "/api/payroll/v1/periode": {
+      "get": {
+        "tags": [
+          "Periode Payroll"
+        ],
+        "summary": "Membaca daftar periode payroll",
+        "operationId": "getPeriodePayrollList",
+        "description": "API-K05-02 / FTR-K05-01. Hak akses: petugas_payroll, admin_payroll, manajemen, petugas_keuangan, layanan_e2. Mengambil daftar seluruh periode dari database.",
+        "x-api-id": "API-K05-02",
+        "x-feature-id": "FTR-K05-01",
+        "x-ui-id": "UI-K05-01",
+        "x-allowed-roles": [
+          "petugas_payroll",
+          "admin_payroll",
+          "manajemen",
+          "petugas_keuangan",
+          "layanan_e2"
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar periode payroll berhasil diambil dari database.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "total"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PeriodePayroll"
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "example": 4
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak tersedia atau tidak valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Tantangan HTTP Bearer.",
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Peran tidak memiliki izin membaca periode payroll.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Periode Payroll"
+        ],
+        "summary": "Membuat periode payroll baru",
+        "operationId": "createPeriodePayroll",
+        "description": "API-K05-03 / FTR-K05-01. Hak akses terbatas pada petugas payroll dan admin payroll. Menyimpan record periode baru ke database dengan status awal Draf dan UUID unik. Field tambahan ditolak.",
+        "x-api-id": "API-K05-03",
+        "x-feature-id": "FTR-K05-01",
+        "x-ui-id": "UI-K05-01",
+        "x-allowed-roles": [
+          "petugas_payroll",
+          "admin_payroll"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeriodePayrollInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Periode payroll baru berhasil dibuat dan disimpan di database.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodePayroll"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak tersedia atau tidak valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Tantangan HTTP Bearer.",
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Peran tidak memiliki izin menulis periode payroll.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validasi input formulir gagal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payroll/v1/periode/{periodeId}": {
+      "get": {
+        "tags": [
+          "Periode Payroll"
+        ],
+        "summary": "Membaca detail periode payroll berdasarkan ID",
+        "operationId": "getPeriodePayrollDetail",
+        "description": "API-K05-04 / FTR-K05-01. Membaca detail record periode payroll dari database berdasarkan UUID.",
+        "x-api-id": "API-K05-04",
+        "x-feature-id": "FTR-K05-01",
+        "x-ui-id": "UI-K05-01",
+        "x-allowed-roles": [
+          "petugas_payroll",
+          "admin_payroll",
+          "manajemen",
+          "petugas_keuangan",
+          "layanan_e2"
+        ],
+        "parameters": [
+          {
+            "name": "periodeId",
+            "in": "path",
+            "required": true,
+            "description": "UUID periode dari ENT-K05-01.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "01a1193d-2500-7c01-854b-8bf03c711dde"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail periode payroll berhasil dibaca.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodePayroll"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Format UUID tidak valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak tersedia atau tidak valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Tantangan HTTP Bearer.",
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Peran tidak memiliki izin membaca periode payroll.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Periode payroll tidak ditemukan di database.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Periode Payroll"
+        ],
+        "summary": "Memperbarui seluruh data tanggal periode payroll yang ada",
+        "operationId": "updatePeriodePayrollFull",
+        "description": "API-K05-05 / FTR-K05-01. Hak akses terbatas pada petugas payroll dan admin payroll. Mewajibkan ketiga tanggal. Memperbarui tanggal periode pada record database yang sama tanpa mengubah UUID.",
+        "x-api-id": "API-K05-05",
+        "x-feature-id": "FTR-K05-01",
+        "x-ui-id": "UI-K05-01",
+        "x-allowed-roles": [
+          "petugas_payroll",
+          "admin_payroll"
+        ],
+        "parameters": [
+          {
+            "name": "periodeId",
+            "in": "path",
+            "required": true,
+            "description": "UUID periode yang diperbarui.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "01a1193d-2500-7c01-854b-8bf03c711dde"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeriodePayrollInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perubahan periode payroll berhasil disimpan ke record yang sama.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodePayroll"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID periode bukan format UUID yang valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak tersedia atau tidak valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Tantangan HTTP Bearer.",
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Peran tidak memiliki izin mengubah periode payroll.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Periode payroll tidak ditemukan di database.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validasi input formulir gagal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Periode Payroll"
+        ],
+        "summary": "Memperbarui sebagian data tanggal periode payroll yang ada",
+        "operationId": "updatePeriodePayrollPartial",
+        "description": "API-K05-05 / FTR-K05-01. Hak akses terbatas pada petugas payroll dan admin payroll. Mendukung pembaruan parsial (minimal satu field). Keadaan akhir record divalidasi terhadap data tersimpan tanpa mengubah UUID.",
+        "x-api-id": "API-K05-05",
+        "x-feature-id": "FTR-K05-01",
+        "x-ui-id": "UI-K05-01",
+        "x-allowed-roles": [
+          "petugas_payroll",
+          "admin_payroll"
+        ],
+        "parameters": [
+          {
+            "name": "periodeId",
+            "in": "path",
+            "required": true,
+            "description": "UUID periode yang diperbarui.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "01a1193d-2500-7c01-854b-8bf03c711dde"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeriodePayrollPatchInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perubahan periode payroll berhasil disimpan ke record yang sama.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodePayroll"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID periode bukan format UUID yang valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token tidak tersedia atau tidak valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Tantangan HTTP Bearer.",
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Peran tidak memiliki izin mengubah periode payroll.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Periode payroll tidak ditemukan di database.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validasi input formulir gagal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -415,7 +884,8 @@
               "FORBIDDEN",
               "PERIODE_NOT_FOUND",
               "METHOD_NOT_ALLOWED",
-              "ROUTE_NOT_FOUND"
+              "ROUTE_NOT_FOUND",
+              "VALIDATION_ERROR"
             ],
             "description": "Kode galat draf. Pemetaan 400/401/403/404 sesuai contoh respons. 405 dan route 404 hanya untuk proteksi mock."
           },
@@ -445,6 +915,137 @@
             }
           }
         }
+      },
+      "PeriodePayrollInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tanggalMulai",
+          "tanggalAkhir",
+          "tanggalPembayaran"
+        ],
+        "properties": {
+          "tanggalMulai": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-09-01",
+            "description": "Tanggal mulai periode inklusif (YYYY-MM-DD)."
+          },
+          "tanggalAkhir": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-09-30",
+            "description": "Tanggal akhir periode inklusif (YYYY-MM-DD), tidak boleh sebelum tanggalMulai."
+          },
+          "tanggalPembayaran": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-10-01",
+            "description": "Tanggal pembayaran payroll (YYYY-MM-DD)."
+          }
+        }
+      },
+      "PeriodePayroll": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "periodeId",
+          "namaPeriode",
+          "tanggalMulai",
+          "tanggalAkhir",
+          "tanggalPembayaran",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01a1193d-2500-7c01-854b-8bf03c711dde",
+            "description": "UUID unik periode payroll dari ENT-K05-01."
+          },
+          "periodeId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01a1193d-2500-7c01-854b-8bf03c711dde",
+            "description": "Alias UUID periode untuk konsistensi kontrak rekap biaya."
+          },
+          "namaPeriode": {
+            "type": "string",
+            "minLength": 1,
+            "example": "September 2026",
+            "description": "Nama tampil periode payroll yang diturunkan dari bulan dan tahun tanggalMulai."
+          },
+          "tanggalMulai": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-09-01",
+            "description": "Tanggal mulai periode inklusif (YYYY-MM-DD)."
+          },
+          "tanggalAkhir": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-09-30",
+            "description": "Tanggal akhir periode inklusif (YYYY-MM-DD)."
+          },
+          "tanggalPembayaran": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-10-01",
+            "description": "Tanggal pembayaran payroll (YYYY-MM-DD)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Draf",
+              "Dihitung",
+              "Menunggu Persetujuan",
+              "Disetujui"
+            ],
+            "example": "Draf",
+            "description": "Status siklus periode payroll. Status awal selalu Draf."
+          },
+          "statusPeriode": {
+            "type": "string",
+            "example": "Draf",
+            "description": "Alias status periode untuk konsistensi kontrak rekap."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-27T20:00:00+07:00"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-27T20:00:00+07:00"
+          }
+        }
+      },
+      "PeriodePayrollPatchInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tanggalMulai": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-09-01",
+            "description": "Tanggal mulai periode inklusif (YYYY-MM-DD)."
+          },
+          "tanggalAkhir": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-09-30",
+            "description": "Tanggal akhir periode inklusif (YYYY-MM-DD), tidak boleh sebelum tanggalMulai."
+          },
+          "tanggalPembayaran": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-10-05",
+            "description": "Tanggal pembayaran payroll (YYYY-MM-DD)."
+          }
+        },
+        "description": "Pembaruan parsial. Minimal satu field tanggal harus disertakan."
       }
     }
   },

@@ -2,16 +2,19 @@ openapi: 3.0.3
 info:
   title: API Rekap Biaya Payroll F-5
   version: v0.2
-  description: 'Draf kontrak minggu 3, tanggal 2026-10-13, berdasarkan dokumen minggu 2 v0.2. API-K05-01
-    mendukung FTR-K05-09 dan UI-K05-09. Konsumen lintas kelompok: E-2. Kontrak belum direview E-2. Q-12,
-    Q-17, format galat, dan autentikasi final masih terbuka. Server contoh mengembalikan fixture fiktif,
-    belum menghitung payroll atau terhubung ke F-1/F-2/F-3/F-4.'
+  description: 'Draf kontrak minggu 3, tanggal 2026-10-13, berdasarkan dokumen minggu
+    2 v0.2. API-K05-01 mendukung FTR-K05-09 dan UI-K05-09. Konsumen lintas kelompok:
+    E-2. Kontrak belum direview E-2. Q-12, Q-17, format galat, dan autentikasi final
+    masih terbuka. Server contoh mengembalikan fixture fiktif, belum menghitung payroll
+    atau terhubung ke F-1/F-2/F-3/F-4.'
 servers:
 - url: http://127.0.0.1:8000
   description: Mock lokal, token dan data demo fiktif
 tags:
 - name: Rekap Biaya
   description: Agregat payroll dan pembayaran termin per periode.
+- name: Periode Payroll
+  description: Pengelolaan dan penyiapan periode payroll (FTR-K05-01 / UI-K05-01).
 security:
 - BearerAuth: []
 paths:
@@ -21,11 +24,12 @@ paths:
       - Rekap Biaya
       summary: Membaca rekap biaya per periode
       operationId: getRekapBiaya
-      description: 'API-K05-01 / FTR-K05-09. Hak akses: manajemen, petugas keuangan, atau layanan E-2
-        berkredensial. Tidak mengirim employeeId, nama, gaji pokok per orang, rekening, NPWP, atau slip
-        individual. Token diperiksa sebelum input. Periode kosong tetap HTTP 200 dengan adaData=false
-        dan agregat 0. totalBiaya selalu null. GET tidak mengubah data. Tidak ada paging, pengurutan,
-        atau body. Parameter query tambahan diabaikan pada mock.'
+      description: 'API-K05-01 / FTR-K05-09. Hak akses: manajemen, petugas keuangan,
+        atau layanan E-2 berkredensial. Tidak mengirim employeeId, nama, gaji pokok
+        per orang, rekening, NPWP, atau slip individual. Token diperiksa sebelum input.
+        Periode kosong tetap HTTP 200 dengan adaData=false dan agregat 0. totalBiaya
+        selalu null. GET tidak mengubah data. Tidak ada paging, pengurutan, atau body.
+        Parameter query tambahan diabaikan pada mock.'
       x-api-id: API-K05-01
       x-feature-id: FTR-K05-09
       x-ui-id: UI-K05-09
@@ -38,8 +42,8 @@ paths:
       - name: periodeId
         in: query
         required: true
-        description: Satu UUID periode dari ENT-K05-01. UUID diterbitkan F-5. Tidak mewajibkan versi UUID
-          tertentu.
+        description: Satu UUID periode dari ENT-K05-01. UUID diterbitkan F-5. Tidak
+          mewajibkan versi UUID tertentu.
         schema:
           type: string
           format: uuid
@@ -47,7 +51,8 @@ paths:
         example: 01a1193d-2500-7c04-854b-8bf03c711dde
       responses:
         '200':
-          description: Periode valid, termasuk periode kosong atau termin saja. Tidak memuat rincian pribadi.
+          description: Periode valid, termasuk periode kosong atau termin saja. Tidak
+            memuat rincian pribadi.
           content:
             application/json:
               schema:
@@ -117,7 +122,8 @@ paths:
                     diperbaruiPada: '2026-10-13T19:43:00+07:00'
                   x-file: examples/success-termin-only.json
         '400':
-          description: periodeId kosong, tidak berbentuk UUID, atau diberikan lebih dari satu kali.
+          description: periodeId kosong, tidak berbentuk UUID, atau diberikan lebih
+            dari satu kali.
           content:
             application/json:
               schema:
@@ -126,7 +132,8 @@ paths:
                 ContohGalat:
                   value:
                     code: INVALID_PERIODE_ID
-                    message: periodeId wajib diisi satu kali dengan format UUID yang benar.
+                    message: periodeId wajib diisi satu kali dengan format UUID yang
+                      benar.
                     details:
                     - field: periodeId
                       message: Gunakan satu UUID dalam format 8-4-4-4-12.
@@ -178,13 +185,328 @@ paths:
                     - field: periodeId
                       message: UUID periode tidak dikenal.
                   x-file: examples/error.json
+  /api/payroll/v1/periode:
+    get:
+      tags:
+      - Periode Payroll
+      summary: Membaca daftar periode payroll
+      operationId: getPeriodePayrollList
+      description: 'API-K05-02 / FTR-K05-01. Hak akses: petugas_payroll, admin_payroll,
+        manajemen, petugas_keuangan, layanan_e2. Mengambil daftar seluruh periode
+        dari database.'
+      x-api-id: API-K05-02
+      x-feature-id: FTR-K05-01
+      x-ui-id: UI-K05-01
+      x-allowed-roles:
+      - petugas_payroll
+      - admin_payroll
+      - manajemen
+      - petugas_keuangan
+      - layanan_e2
+      responses:
+        '200':
+          description: Daftar periode payroll berhasil diambil dari database.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - total
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PeriodePayroll'
+                  total:
+                    type: integer
+                    example: 4
+        '401':
+          description: Token tidak tersedia atau tidak valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            WWW-Authenticate:
+              description: Tantangan HTTP Bearer.
+              schema:
+                type: string
+                example: Bearer
+        '403':
+          description: Peran tidak memiliki izin membaca periode payroll.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - Periode Payroll
+      summary: Membuat periode payroll baru
+      operationId: createPeriodePayroll
+      description: API-K05-03 / FTR-K05-01. Hak akses terbatas pada petugas payroll
+        dan admin payroll. Menyimpan record periode baru ke database dengan status
+        awal Draf dan UUID unik. Field tambahan ditolak.
+      x-api-id: API-K05-03
+      x-feature-id: FTR-K05-01
+      x-ui-id: UI-K05-01
+      x-allowed-roles:
+      - petugas_payroll
+      - admin_payroll
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeriodePayrollInput'
+      responses:
+        '201':
+          description: Periode payroll baru berhasil dibuat dan disimpan di database.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeriodePayroll'
+        '401':
+          description: Token tidak tersedia atau tidak valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            WWW-Authenticate:
+              description: Tantangan HTTP Bearer.
+              schema:
+                type: string
+                example: Bearer
+        '403':
+          description: Peran tidak memiliki izin menulis periode payroll.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validasi input formulir gagal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/payroll/v1/periode/{periodeId}:
+    get:
+      tags:
+      - Periode Payroll
+      summary: Membaca detail periode payroll berdasarkan ID
+      operationId: getPeriodePayrollDetail
+      description: API-K05-04 / FTR-K05-01. Membaca detail record periode payroll
+        dari database berdasarkan UUID.
+      x-api-id: API-K05-04
+      x-feature-id: FTR-K05-01
+      x-ui-id: UI-K05-01
+      x-allowed-roles:
+      - petugas_payroll
+      - admin_payroll
+      - manajemen
+      - petugas_keuangan
+      - layanan_e2
+      parameters:
+      - name: periodeId
+        in: path
+        required: true
+        description: UUID periode dari ENT-K05-01.
+        schema:
+          type: string
+          format: uuid
+        example: 01a1193d-2500-7c01-854b-8bf03c711dde
+      responses:
+        '200':
+          description: Detail periode payroll berhasil dibaca.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeriodePayroll'
+        '400':
+          description: Format UUID tidak valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token tidak tersedia atau tidak valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            WWW-Authenticate:
+              description: Tantangan HTTP Bearer.
+              schema:
+                type: string
+                example: Bearer
+        '403':
+          description: Peran tidak memiliki izin membaca periode payroll.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Periode payroll tidak ditemukan di database.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+      - Periode Payroll
+      summary: Memperbarui seluruh data tanggal periode payroll yang ada
+      operationId: updatePeriodePayrollFull
+      description: API-K05-05 / FTR-K05-01. Hak akses terbatas pada petugas payroll
+        dan admin payroll. Mewajibkan ketiga tanggal. Memperbarui tanggal periode
+        pada record database yang sama tanpa mengubah UUID.
+      x-api-id: API-K05-05
+      x-feature-id: FTR-K05-01
+      x-ui-id: UI-K05-01
+      x-allowed-roles:
+      - petugas_payroll
+      - admin_payroll
+      parameters:
+      - name: periodeId
+        in: path
+        required: true
+        description: UUID periode yang diperbarui.
+        schema:
+          type: string
+          format: uuid
+        example: 01a1193d-2500-7c01-854b-8bf03c711dde
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeriodePayrollInput'
+      responses:
+        '200':
+          description: Perubahan periode payroll berhasil disimpan ke record yang
+            sama.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeriodePayroll'
+        '400':
+          description: ID periode bukan format UUID yang valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token tidak tersedia atau tidak valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            WWW-Authenticate:
+              description: Tantangan HTTP Bearer.
+              schema:
+                type: string
+                example: Bearer
+        '403':
+          description: Peran tidak memiliki izin mengubah periode payroll.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Periode payroll tidak ditemukan di database.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validasi input formulir gagal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+      - Periode Payroll
+      summary: Memperbarui sebagian data tanggal periode payroll yang ada
+      operationId: updatePeriodePayrollPartial
+      description: API-K05-05 / FTR-K05-01. Hak akses terbatas pada petugas payroll
+        dan admin payroll. Mendukung pembaruan parsial (minimal satu field). Keadaan
+        akhir record divalidasi terhadap data tersimpan tanpa mengubah UUID.
+      x-api-id: API-K05-05
+      x-feature-id: FTR-K05-01
+      x-ui-id: UI-K05-01
+      x-allowed-roles:
+      - petugas_payroll
+      - admin_payroll
+      parameters:
+      - name: periodeId
+        in: path
+        required: true
+        description: UUID periode yang diperbarui.
+        schema:
+          type: string
+          format: uuid
+        example: 01a1193d-2500-7c01-854b-8bf03c711dde
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeriodePayrollPatchInput'
+      responses:
+        '200':
+          description: Perubahan periode payroll berhasil disimpan ke record yang
+            sama.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeriodePayroll'
+        '400':
+          description: ID periode bukan format UUID yang valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token tidak tersedia atau tidak valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            WWW-Authenticate:
+              description: Tantangan HTTP Bearer.
+              schema:
+                type: string
+                example: Bearer
+        '403':
+          description: Peran tidak memiliki izin mengubah periode payroll.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Periode payroll tidak ditemukan di database.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validasi input formulir gagal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
-      description: Usulan autentikasi mengikuti F-1. Belum menetapkan JWT atau alur OAuth. Mock menerima
-        mock-manajemen, mock-keuangan, dan mock-e2. Token demo bukan kredensial mitra.
+      description: Usulan autentikasi mengikuti F-1. Belum menetapkan JWT atau alur
+        OAuth. Mock menerima mock-manajemen, mock-keuangan, dan mock-e2. Token demo
+        bukan kredensial mitra.
   schemas:
     RekapBiaya:
       type: object
@@ -222,7 +544,8 @@ components:
         tanggalMulai:
           type: string
           format: date
-          description: Awal rentang periode (inklusif). Rentang contoh bukan keputusan cut-off final.
+          description: Awal rentang periode (inklusif). Rentang contoh bukan keputusan
+            cut-off final.
           example: '2026-10-01'
         tanggalAkhir:
           type: string
@@ -236,94 +559,99 @@ components:
           - Dihitung
           - Menunggu Persetujuan
           - Disetujui
-          description: Persis mengikuti ENT-K05-01. Status yang boleh masuk rekap final menunggu Q-17.
-            Mock menyediakan data fiktif untuk demo.
+          description: Persis mengikuti ENT-K05-01. Status yang boleh masuk rekap
+            final menunggu Q-17. Mock menyediakan data fiktif untuk demo.
           example: Disetujui
         adaData:
           type: boolean
-          description: true bila ada hasil payroll atau pembayaran termin pada periode. Periode termin
-            saja juga true.
+          description: true bila ada hasil payroll atau pembayaran termin pada periode.
+            Periode termin saja juga true.
           example: true
         jumlahKaryawan:
           type: integer
           minimum: 0
-          description: Jumlah karyawan dalam hasil payroll ENT-K05-08. Nol bila belum ada hasil.
+          description: Jumlah karyawan dalam hasil payroll ENT-K05-08. Nol bila belum
+            ada hasil.
           example: 1
         totalPendapatan:
           type: number
           minimum: 0
           maximum: 9999999999999.99
           multipleOf: 0.01
-          description: Jumlah totalPendapatan ENT-K05-08. Bonus sudah termasuk, tidak ditambah ulang.
-            Nominal rupiah, maksimal dua desimal.
+          description: Jumlah totalPendapatan ENT-K05-08. Bonus sudah termasuk, tidak
+            ditambah ulang. Nominal rupiah, maksimal dua desimal.
           example: 7750000.0
         totalBonus:
           type: number
           minimum: 0
           maximum: 9999999999999.99
           multipleOf: 0.01
-          description: Jumlah rincian Bonus ENT-K05-09, ditelusuri ke ENT-K05-05. Bagian dari totalPendapatan.
-            Nominal rupiah, maksimal dua desimal.
+          description: Jumlah rincian Bonus ENT-K05-09, ditelusuri ke ENT-K05-05.
+            Bagian dari totalPendapatan. Nominal rupiah, maksimal dua desimal.
           example: 750000.0
         totalPotongan:
           type: number
           minimum: 0
           maximum: 9999999999999.99
           multipleOf: 0.01
-          description: Jumlah potongan komponen pada ENT-K05-08. Tidak termasuk BPJS karyawan. Nominal
-            rupiah, maksimal dua desimal.
+          description: Jumlah potongan komponen pada ENT-K05-08. Tidak termasuk BPJS
+            karyawan. Nominal rupiah, maksimal dua desimal.
           example: 200000.0
         totalBpjsKaryawan:
           type: number
           minimum: 0
           maximum: 9999999999999.99
           multipleOf: 0.01
-          description: Jumlah bpjsKaryawan ENT-K05-08, terpisah dari totalPotongan. Nominal rupiah, maksimal
-            dua desimal.
+          description: Jumlah bpjsKaryawan ENT-K05-08, terpisah dari totalPotongan.
+            Nominal rupiah, maksimal dua desimal.
           example: 65000.0
         totalGajiBersih:
           type: number
           minimum: 0
           maximum: 9999999999999.99
           multipleOf: 0.01
-          description: 'Jumlah gajiBersih ENT-K05-08. Usulan rumus: pendapatan - potongan komponen - BPJS
-            karyawan. PPh 21 menunggu Q-11. Nominal rupiah, maksimal dua desimal.'
+          description: 'Jumlah gajiBersih ENT-K05-08. Usulan rumus: pendapatan - potongan
+            komponen - BPJS karyawan. PPh 21 menunggu Q-11. Nominal rupiah, maksimal
+            dua desimal.'
           example: 7485000.0
         totalBpjsPerusahaan:
           type: number
           minimum: 0
           maximum: 9999999999999.99
           multipleOf: 0.01
-          description: Jumlah bpjsPerusahaan ENT-K05-08. Ditampilkan terpisah dan tidak mengurangi gaji
-            bersih. Nominal rupiah, maksimal dua desimal.
+          description: Jumlah bpjsPerusahaan ENT-K05-08. Ditampilkan terpisah dan
+            tidak mengurangi gaji bersih. Nominal rupiah, maksimal dua desimal.
           example: 260000.0
         totalTermin:
           type: number
           minimum: 0
           maximum: 9999999999999.99
           multipleOf: 0.01
-          description: Jumlah nominalDibayar ENT-K05-15 melalui ENT-K05-13. Usulan demo memakai tanggalBayar
-            dalam rentang inklusif, dasar final menunggu Q-12. Nominal rupiah, maksimal dua desimal.
+          description: Jumlah nominalDibayar ENT-K05-15 melalui ENT-K05-13. Usulan
+            demo memakai tanggalBayar dalam rentang inklusif, dasar final menunggu
+            Q-12. Nominal rupiah, maksimal dua desimal.
           example: 25000000.0
         jumlahTermin:
           type: integer
           minimum: 0
-          description: Jumlah termin unik yang pembayarannya masuk rekap, melalui ENT-K05-13/15.
+          description: Jumlah termin unik yang pembayarannya masuk rekap, melalui
+            ENT-K05-13/15.
           example: 1
         totalBiaya:
           type: number
           nullable: true
           enum:
           - null
-          description: Wajib ada dan selalu null pada draf v0.2, termasuk periode kosong. Definisi total
-            biaya menunggu Q-17. Jangan menjumlah seluruh field agregat karena beberapa saling mencakup.
+          description: Wajib ada dan selalu null pada draf v0.2, termasuk periode
+            kosong. Definisi total biaya menunggu Q-17. Jangan menjumlah seluruh field
+            agregat karena beberapa saling mencakup.
           example: null
         diperbaruiPada:
           type: string
           format: date-time
           pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?\+07:00$
-          description: Waktu agregat dihitung dengan offset WIB +07:00. Pada mock nilainya tetap dari
-            fixture.
+          description: Waktu agregat dihitung dengan offset WIB +07:00. Pada mock
+            nilainya tetap dari fixture.
           example: '2026-10-13T19:43:00+07:00'
     ErrorResponse:
       type: object
@@ -342,8 +670,9 @@ components:
           - PERIODE_NOT_FOUND
           - METHOD_NOT_ALLOWED
           - ROUTE_NOT_FOUND
-          description: Kode galat draf. Pemetaan 400/401/403/404 sesuai contoh respons. 405 dan route
-            404 hanya untuk proteksi mock.
+          - VALIDATION_ERROR
+          description: Kode galat draf. Pemetaan 400/401/403/404 sesuai contoh respons.
+            405 dan route 404 hanya untuk proteksi mock.
         message:
           type: string
           minLength: 1
@@ -362,6 +691,115 @@ components:
                 type: string
               message:
                 type: string
+    PeriodePayrollInput:
+      type: object
+      additionalProperties: false
+      required:
+      - tanggalMulai
+      - tanggalAkhir
+      - tanggalPembayaran
+      properties:
+        tanggalMulai:
+          type: string
+          format: date
+          example: '2026-09-01'
+          description: Tanggal mulai periode inklusif (YYYY-MM-DD).
+        tanggalAkhir:
+          type: string
+          format: date
+          example: '2026-09-30'
+          description: Tanggal akhir periode inklusif (YYYY-MM-DD), tidak boleh sebelum
+            tanggalMulai.
+        tanggalPembayaran:
+          type: string
+          format: date
+          example: '2026-10-01'
+          description: Tanggal pembayaran payroll (YYYY-MM-DD).
+    PeriodePayroll:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - periodeId
+      - namaPeriode
+      - tanggalMulai
+      - tanggalAkhir
+      - tanggalPembayaran
+      - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 01a1193d-2500-7c01-854b-8bf03c711dde
+          description: UUID unik periode payroll dari ENT-K05-01.
+        periodeId:
+          type: string
+          format: uuid
+          example: 01a1193d-2500-7c01-854b-8bf03c711dde
+          description: Alias UUID periode untuk konsistensi kontrak rekap biaya.
+        namaPeriode:
+          type: string
+          minLength: 1
+          example: September 2026
+          description: Nama tampil periode payroll yang diturunkan dari bulan dan
+            tahun tanggalMulai.
+        tanggalMulai:
+          type: string
+          format: date
+          example: '2026-09-01'
+          description: Tanggal mulai periode inklusif (YYYY-MM-DD).
+        tanggalAkhir:
+          type: string
+          format: date
+          example: '2026-09-30'
+          description: Tanggal akhir periode inklusif (YYYY-MM-DD).
+        tanggalPembayaran:
+          type: string
+          format: date
+          example: '2026-10-01'
+          description: Tanggal pembayaran payroll (YYYY-MM-DD).
+        status:
+          type: string
+          enum:
+          - Draf
+          - Dihitung
+          - Menunggu Persetujuan
+          - Disetujui
+          example: Draf
+          description: Status siklus periode payroll. Status awal selalu Draf.
+        statusPeriode:
+          type: string
+          example: Draf
+          description: Alias status periode untuk konsistensi kontrak rekap.
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-10-27T20:00:00+07:00'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-10-27T20:00:00+07:00'
+    PeriodePayrollPatchInput:
+      type: object
+      additionalProperties: false
+      properties:
+        tanggalMulai:
+          type: string
+          format: date
+          example: '2026-09-01'
+          description: Tanggal mulai periode inklusif (YYYY-MM-DD).
+        tanggalAkhir:
+          type: string
+          format: date
+          example: '2026-09-30'
+          description: Tanggal akhir periode inklusif (YYYY-MM-DD), tidak boleh sebelum
+            tanggalMulai.
+        tanggalPembayaran:
+          type: string
+          format: date
+          example: '2026-10-05'
+          description: Tanggal pembayaran payroll (YYYY-MM-DD).
+      description: Pembaruan parsial. Minimal satu field tanggal harus disertakan.
 x-open-questions:
 - id: Q-12
   topic: Dasar periode pembayaran termin
@@ -374,7 +812,8 @@ x-open-questions:
   target: Belum ditetapkan
   status: Terbuka
 - id: Q-14
-  topic: Konfirmasi apakah data ID Proyek dan penugasan PM tersedia di dalam data kontrak
+  topic: Konfirmasi apakah data ID Proyek dan penugasan PM tersedia di dalam data
+    kontrak
   owner: Zaki Ramadhan Wijaya (usulan), F-2
   target: Belum ditetapkan
   status: Terbuka
