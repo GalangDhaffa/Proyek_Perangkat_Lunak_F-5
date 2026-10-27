@@ -136,6 +136,8 @@ Pengujian berada di `web/tests/Feature/`. Terpisah dari pengujian Python di root
 
 ## Endpoint API demo
 
+### 1. Rekap Biaya (FTR-K05-09 / API-K05-01)
+
 ```
 GET /api/payroll/v1/rekap-biaya?periodeId=<UUID>
 Authorization: Bearer <token>
@@ -150,7 +152,28 @@ Authorization: Bearer <token>
 | `mock-tenaga-ahli` | tenaga_ahli | Ditolak (403) |
 | Token lain / kosong | tidak dikenal | Tidak terotorisasi (401) |
 
-### ID periode fixture demo
+### 2. Periode Payroll (FTR-K05-01 / UI-K05-01 / API-K05-02 s.d API-K05-05)
+
+Halaman antarmuka: `http://127.0.0.1:8001/periode-payroll`
+
+```
+GET   /api/payroll/v1/periode              # Daftar periode (DB)
+GET   /api/payroll/v1/periode/{periodeId}  # Detail periode (DB)
+POST  /api/payroll/v1/periode              # Buat periode baru (Petugas/Admin Payroll)
+PUT   /api/payroll/v1/periode/{periodeId}  # Perbarui periode penuh (Petugas/Admin Payroll)
+PATCH /api/payroll/v1/periode/{periodeId}  # Perbarui periode parsial (Petugas/Admin Payroll)
+```
+
+| Token demo | Peran | Akses Baca (GET) | Akses Tulis (POST/PUT/PATCH) |
+| --- | --- | --- | --- |
+| `mock-payroll` / `mock-petugas-payroll` | petugas_payroll | Diizinkan (200) | Diizinkan (201/200) |
+| `mock-admin-payroll` | admin_payroll | Diizinkan (200) | Diizinkan (201/200) |
+| `mock-manajemen` | manajemen | Diizinkan (200) | Ditolak (403) |
+| `mock-keuangan` | petugas_keuangan | Diizinkan (200) | Ditolak (403) |
+| `mock-e2` | layanan_e2 | Diizinkan (200) | Ditolak (403) |
+| `mock-karyawan` | karyawan | Ditolak (403) | Ditolak (403) |
+
+### ID periode fixture demo & database
 
 | Skenario | periodeId |
 | --- | --- |
@@ -158,12 +181,17 @@ Authorization: Bearer <token>
 | Periode kosong | `01a1193d-2500-7c05-854b-8bf03c711dde` |
 | Termin saja | `01a1193d-2500-7c06-854b-8bf03c711dde` |
 
-UUID tidak dikenal tapi format valid → 404. Format salah / kosong / duplikat → 400.
+Untuk mengisi data awal ke database SQLite:
+```bash
+php artisan db:seed --class=PayrollPeriodSeeder
+```
+
+UUID tidak dikenal tapi format valid → 404. Format salah / kosong / duplikat → 400. Validasi input gagal → 422.
 
 Contoh dengan `curl.exe` di PowerShell:
 
 ```powershell
-curl.exe -i -H "Authorization: Bearer mock-e2" "http://127.0.0.1:8001/api/payroll/v1/rekap-biaya?periodeId=01a1193d-2500-7c04-854b-8bf03c711dde"
+curl.exe -i -H "Authorization: Bearer mock-payroll" "http://127.0.0.1:8001/api/payroll/v1/periode"
 ```
 
 ---
@@ -175,6 +203,7 @@ curl.exe -i -H "Authorization: Bearer mock-e2" "http://127.0.0.1:8001/api/payrol
 - `totalPotongan` adalah potongan komponen karyawan di luar BPJS. `totalBpjsKaryawan` dicatat terpisah.
 - Pemformatan rupiah dilakukan di frontend. Nilai JSON berupa angka tanpa pemisah ribuan.
 - UUID pencarian bersifat case-insensitive (huruf besar/kecil dianggap sama).
+- Periode baru yang dibuat di database otomatis terintegrasi dengan Rekap Biaya dan mengembalikan respons `adaData: false`, agregat 0, dan `totalBiaya: null` jika belum memiliki transaksi.
 
 ---
 
@@ -183,15 +212,29 @@ curl.exe -i -H "Authorization: Bearer mock-e2" "http://127.0.0.1:8001/api/payrol
 ```
 web/
 ├── app/
-│   ├── Http/Controllers/Api/RekapBiayaController.php   # Endpoint rekap
+│   ├── Http/Controllers/Api/
+│   │   ├── RekapBiayaController.php                    # Endpoint rekap
+│   │   └── PayrollPeriodController.php                 # Endpoint periode (CRUD)
+│   ├── Models/
+│   │   └── PayrollPeriod.php                           # Model Eloquent periode payroll
 │   └── Services/RekapBiayaFixtureService.php           # Fixture demo backend
+├── database/
+│   ├── migrations/                                     # Migrasi tabel payroll_periods
+│   └── seeders/PayrollPeriodSeeder.php                 # Seeder periode awal
 ├── resources/
-│   ├── js/rekap-biaya.js                               # Modul frontend
-│   └── views/rekap-biaya.blade.php                     # Halaman utama
+│   ├── js/
+│   │   ├── app.js                                      # Entrypoint JS
+│   │   ├── rekap-biaya.js                              # Modul frontend rekap
+│   │   └── periode-payroll.js                          # Modul frontend periode
+│   └── views/
+│       ├── components/layouts/app.blade.php            # Layout bersama & navigasi
+│       ├── rekap-biaya.blade.php                       # Halaman rekap biaya
+│       └── periode-payroll.blade.php                   # Halaman periode payroll
 ├── routes/
 │   ├── api.php                                         # Route API
-│   └── web.php                                         # Route halaman
+│   └── web.php                                         # Route halaman web
 └── tests/Feature/
     ├── ExampleTest.php                                 # Uji dasar
-    └── RekapBiayaApiTest.php                           # Uji endpoint rekap
+    ├── RekapBiayaApiTest.php                           # Uji endpoint rekap
+    └── PayrollPeriodApiTest.php                        # Uji endpoint periode payroll
 ```

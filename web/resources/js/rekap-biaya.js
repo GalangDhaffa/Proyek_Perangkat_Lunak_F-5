@@ -328,6 +328,35 @@ export function initRekapBiaya() {
 
     // ── Inisialisasi ──────────────────────────────────────────────────────────
 
+    async function syncDatabasePeriods() {
+        try {
+            const res = await fetch('/api/payroll/v1/periode', {
+                headers: {
+                    'Authorization': 'Bearer mock-manajemen',
+                    'Accept': 'application/json',
+                },
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const existing = new Set(Array.from(selectPeriode.options).map(o => o.value.toLowerCase()));
+                (data.data || []).forEach(p => {
+                    const id = (p.uuid || p.id).toLowerCase();
+                    if (!existing.has(id)) {
+                        const opt = document.createElement('option');
+                        opt.value = p.uuid || p.id;
+                        opt.textContent = `${p.namaPeriode || 'Periode Baru'} — Dari Database`;
+                        selectPeriode.appendChild(opt);
+                        existing.add(id);
+                    }
+                });
+            }
+        } catch {
+            // Abaikan jika offline
+        }
+    }
+
+    syncDatabasePeriods();
+
     btnTampilkan.addEventListener('click', loadRekap);
 
     // Muat otomatis saat halaman pertama kali dibuka
