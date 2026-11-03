@@ -14,4 +14,7 @@ Route::prefix('payroll/v1')->group(function () {
     Route::get('/periode/{periodeId}', [PayrollPeriodController::class, 'show']);
     Route::put('/periode/{periodeId}', [PayrollPeriodController::class, 'updateFull']);
     Route::patch('/periode/{periodeId}', [PayrollPeriodController::class, 'updatePartial']);
+
+    // Integrasi Cuti F-4 (API-K05-06 / FTR-K05-01)
+    Route::get('/periode/{periodeId}/cuti', [PayrollPeriodController::class, 'getLeaveStatus']);
 });

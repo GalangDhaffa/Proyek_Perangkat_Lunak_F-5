@@ -2,7 +2,7 @@
 
 Aplikasi web ERP PT Anaheim Nimbus Universal, Kelompok 5 Kelas F, modul payroll dan rekap biaya.
 
-**Catatan penting:** Backend saat ini menggunakan fixture demo dan autentikasi mock. Belum ada integrasi nyata dengan modul F-1 (autentikasi), F-2 (karyawan), F-3 (kehadiran), atau F-4 (cuti). Token demo menggantikan autentikasi F-1 sampai integrasi tersedia.
+**Catatan penting:** Backend saat ini menggunakan fixture demo dan autentikasi mock untuk F-1. Integrasi API modul F-4 (cuti) telah diterapkan pada fitur Periode Payroll untuk membaca cuti karyawan (status APPROVED) dari http://localhost:3000. F-2 (karyawan) dan F-3 (kehadiran) belum diintegrasikan secara langsung. Token demo menggantikan autentikasi F-1 sampai integrasi tersedia.
 
 ---
 
@@ -173,6 +173,38 @@ PATCH /api/payroll/v1/periode/{periodeId}  # Perbarui periode parsial (Petugas/A
 | `mock-e2` | layanan_e2 | Diizinkan (200) | Ditolak (403) |
 | `mock-karyawan` | karyawan | Ditolak (403) | Ditolak (403) |
 
+### 3. Integrasi Cuti F-4 (API-K05-06 / FTR-K05-01 / Pertemuan 6)
+
+Endpoint internal backend Laravel untuk mengambil data cuti karyawan berstatus `APPROVED` dari layanan produsen F-4 (API-K04-07 `GET /api/v1/leave-status`). Parameter tanggal `from` dan `to` diambil langsung dari tanggal periode aktif yang tersimpan di database.
+
+```
+GET /api/payroll/v1/periode/{periodeId}/cuti?employeeId=<ID>
+Authorization: Bearer <token>
+```
+
+| Token demo | Peran | Akses Cuti |
+| --- | --- | --- |
+| `mock-payroll` / `mock-petugas-payroll` | petugas_payroll | Diizinkan (200) |
+| `mock-admin-payroll` | admin_payroll | Diizinkan (200) |
+| `mock-manajemen` / `mock-keuangan` / `mock-e2` | non-payroll | Ditolak (403) |
+| `mock-karyawan` / `mock-tenaga-ahli` | karyawan | Ditolak (403) |
+| Token tidak ada / tidak valid | - | Tidak terotorisasi (401) |
+
+#### Konfigurasi Integrasi F-4 (.env):
+```env
+F4_BASE_URL=http://localhost:3000
+F4_TOKEN=token-uji-f5
+F4_TIMEOUT=5
+F4_CONNECT_TIMEOUT=3
+```
+Token `F4_TOKEN` hanya disimpan di sisi backend Laravel dan tidak pernah dikirim ke browser JavaScript atau dicatat di log.
+
+#### Batasan Integrasi:
+- Rentang tanggal periode dibatasi maksimal **31 hari inklusif** mengikuti kontrak F-4.
+- F-1 masih menggunakan simulasi autentikasi token demo lokal (`mock-payroll`).
+- F-4 saat ini berjalan dengan `employeeSource: seed` (data karyawan `EMP-001` merujuk seed lokal).
+- Data cuti yang diambil adalah untuk informasi penyiapan periode payroll (belum dihitung otomatis sebagai potongan gaji payroll atau klaim kesiapan modul payroll secara utuh).
+
 ### ID periode fixture demo & database
 
 | Skenario | periodeId |
@@ -214,10 +246,12 @@ web/
 ├── app/
 │   ├── Http/Controllers/Api/
 │   │   ├── RekapBiayaController.php                    # Endpoint rekap
-│   │   └── PayrollPeriodController.php                 # Endpoint periode (CRUD)
+│   │   └── PayrollPeriodController.php                 # Endpoint periode & cuti F-4
 │   ├── Models/
 │   │   └── PayrollPeriod.php                           # Model Eloquent periode payroll
-│   └── Services/RekapBiayaFixtureService.php           # Fixture demo backend
+│   └── Services/
+│       ├── RekapBiayaFixtureService.php                # Fixture demo backend
+│       └── F4LeaveService.php                          # HTTP Client integrasi API cuti F-4
 ├── database/
 │   ├── migrations/                                     # Migrasi tabel payroll_periods
 │   └── seeders/PayrollPeriodSeeder.php                 # Seeder periode awal
@@ -225,16 +259,17 @@ web/
 │   ├── js/
 │   │   ├── app.js                                      # Entrypoint JS
 │   │   ├── rekap-biaya.js                              # Modul frontend rekap
-│   │   └── periode-payroll.js                          # Modul frontend periode
+│   │   └── periode-payroll.js                          # Modul frontend periode & cuti
 │   └── views/
 │       ├── components/layouts/app.blade.php            # Layout bersama & navigasi
 │       ├── rekap-biaya.blade.php                       # Halaman rekap biaya
-│       └── periode-payroll.blade.php                   # Halaman periode payroll
+│       └── periode-payroll.blade.php                   # Halaman periode payroll & cuti
 ├── routes/
 │   ├── api.php                                         # Route API
 │   └── web.php                                         # Route halaman web
 └── tests/Feature/
     ├── ExampleTest.php                                 # Uji dasar
     ├── RekapBiayaApiTest.php                           # Uji endpoint rekap
-    └── PayrollPeriodApiTest.php                        # Uji endpoint periode payroll
+    ├── PayrollPeriodApiTest.php                        # Uji endpoint periode payroll
+    └── LeaveIntegrationTest.php                        # Uji integrasi API cuti F-4
 ```

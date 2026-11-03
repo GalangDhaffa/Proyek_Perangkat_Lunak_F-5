@@ -40,6 +40,16 @@ php artisan serve --port=8001
 
 Jika `.env` belum ada, buat salinan dari `.env.example` terlebih dahulu. Aplikasi demo ini memakai mock token untuk autentikasi lokal dan bukan integrasi nyata F-1. Token demo yang diizinkan: `mock-manajemen`, `mock-keuangan`, dan `mock-e2`. Token `mock-karyawan` dan `mock-tenaga-ahli` akan ditolak dengan HTTP 403. Header kosong atau token tidak dikenal mendapat HTTP 401.
 
+Untuk integrasi API cuti F-4 (tugas pertemuan 6), pastikan konfigurasi F-4 tersedia di web/.env:
+```env
+F4_BASE_URL=http://localhost:3000
+F4_TOKEN=token-uji-f5
+```
+Layanan F-4 berjalan pada http://localhost:3000. Pengambilan cuti dilakukan via endpoint internal F-5:
+```bash
+curl -i -H "Authorization: Bearer mock-payroll" "http://127.0.0.1:8001/api/payroll/v1/periode/01a1193d-2500-7c07-854b-8bf03c711dde/cuti?employeeId=EMP-001"
+```
+
 Untuk pengujian API dari terminal:
 
 ```bash

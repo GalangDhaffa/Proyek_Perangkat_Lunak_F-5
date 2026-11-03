@@ -40,6 +40,22 @@ export function initPeriodePayroll() {
     const alertError       = document.getElementById('alert-error');
     const textError        = document.getElementById('text-error');
 
+    // ── Elemen Integrasi Cuti F-4 ────────────────────────────────────────────
+    const sectionCuti        = document.getElementById('section-cuti');
+    const inputEmployeeId    = document.getElementById('input-employee-id');
+    const btnAmbilCuti       = document.getElementById('btn-ambil-cuti');
+    const textTombolCuti     = document.getElementById('text-tombol-cuti');
+    const iconCutiSpinner    = document.getElementById('icon-cuti-spinner');
+    const iconCutiSearch     = document.getElementById('icon-cuti-search');
+    const alertCutiError     = document.getElementById('alert-cuti-error');
+    const textCutiError      = document.getElementById('text-cuti-error');
+    const containerHasilCuti = document.getElementById('container-hasil-cuti');
+    const infoRentangCuti    = document.getElementById('info-rentang-cuti');
+    const badgeTotalCuti     = document.getElementById('badge-total-cuti');
+    const stateCutiKosong    = document.getElementById('state-cuti-kosong');
+    const stateCutiTabel     = document.getElementById('state-cuti-tabel');
+    const tbodyCuti          = document.getElementById('tbody-cuti');
+
     // ── State ───────────────────────────────────────────────────────────────
     let mode = 'view'; // 'view' | 'create' | 'edit'
     let periods = [];
@@ -272,6 +288,8 @@ export function initPeriodePayroll() {
                 inp.classList.remove('bg-white');
             });
 
+            setDisplay(sectionCuti, 'block');
+
         } else if (mode === 'create') {
             breadcrumbTitle.textContent = 'Tambah periode';
             pageTitle.textContent = 'Tambah periode';
@@ -286,6 +304,7 @@ export function initPeriodePayroll() {
             setDisplay(btnBatal, 'inline-flex');
             setDisplay(btnSimpan, 'inline-flex');
             setDisplay(btnUbah, 'none');
+            setDisplay(sectionCuti, 'none');
             textTombolSimpan.textContent = 'Simpan periode';
 
             // Bersihkan input untuk pembuatan baru
@@ -316,6 +335,7 @@ export function initPeriodePayroll() {
             setDisplay(btnBatal, 'inline-flex');
             setDisplay(btnSimpan, 'inline-flex');
             setDisplay(btnUbah, 'none');
+            setDisplay(sectionCuti, 'none');
             textTombolSimpan.textContent = 'Simpan perubahan';
 
             // Simpan nilai asli sebelum edit agar tombol Batal bisa mengembalikan
@@ -382,6 +402,7 @@ export function initPeriodePayroll() {
         if (isSaving) return;
         setDisplay(alertSukses, 'none');
         setDisplay(alertError, 'none');
+        clearLeaveResults();
         mode = 'create';
         updateView();
     });
@@ -391,6 +412,7 @@ export function initPeriodePayroll() {
         if (isSaving || periods.length === 0) return;
         setDisplay(alertSukses, 'none');
         setDisplay(alertError, 'none');
+        clearLeaveResults();
         mode = 'edit';
         updateView();
     });
@@ -400,6 +422,7 @@ export function initPeriodePayroll() {
         if (isSaving) return;
         setDisplay(alertSukses, 'none');
         setDisplay(alertError, 'none');
+        clearLeaveResults();
         mode = 'view';
         updateView();
     });
@@ -409,6 +432,7 @@ export function initPeriodePayroll() {
         if (isSaving) return;
         setDisplay(alertSukses, 'none');
         setDisplay(alertError, 'none');
+        clearLeaveResults();
         selectedId = e.target.value;
         mode = 'view';
         updateView();
@@ -521,6 +545,193 @@ export function initPeriodePayroll() {
             textTombolSimpan.textContent = originalBtnText;
         }
     });
+
+    // ── Logika Integrasi Cuti F-4 ───────────────────────────────────────────
+
+    function clearLeaveResults() {
+        setDisplay(alertCutiError, 'none');
+        if (textCutiError) textCutiError.textContent = '';
+        setDisplay(containerHasilCuti, 'none');
+        setDisplay(stateCutiKosong, 'none');
+        setDisplay(stateCutiTabel, 'none');
+        if (tbodyCuti) tbodyCuti.innerHTML = '';
+        if (infoRentangCuti) infoRentangCuti.textContent = '';
+        if (badgeTotalCuti) badgeTotalCuti.textContent = '';
+    }
+
+    function formatLeaveType(type) {
+        switch (type) {
+            case 'ANNUAL': return 'Tahunan (ANNUAL)';
+            case 'SICK': return 'Sakit (SICK)';
+            case 'MENSTRUAL': return 'Haid (MENSTRUAL)';
+            case 'MATERNITY': return 'Melahirkan (MATERNITY)';
+            default: return type || '-';
+        }
+    }
+
+    let isLoadingCuti = false;
+
+    async function ambilDataCuti() {
+        if (isLoadingCuti) return;
+        clearLeaveResults();
+
+        const current = getSelectedPeriod();
+        if (!current || !current.id) {
+            textCutiError.textContent = 'Pilih periode payroll terlebih dahulu.';
+            setDisplay(alertCutiError, 'flex');
+            return;
+        }
+
+        if (!current.tanggalMulai || !current.tanggalAkhir) {
+            textCutiError.textContent = 'Periode yang dipilih belum memiliki tanggal mulai dan tanggal akhir yang lengkap.';
+            setDisplay(alertCutiError, 'flex');
+            return;
+        }
+
+        const empId = inputEmployeeId ? inputEmployeeId.value.trim() : '';
+        if (!empId) {
+            textCutiError.textContent = 'ID Karyawan wajib diisi (contoh: EMP-001).';
+            setDisplay(alertCutiError, 'flex');
+            if (inputEmployeeId) inputEmployeeId.focus();
+            return;
+        }
+
+        isLoadingCuti = true;
+        if (btnAmbilCuti) btnAmbilCuti.disabled = true;
+        setDisplay(iconCutiSpinner, 'inline-block');
+        setDisplay(iconCutiSearch, 'none');
+        if (textTombolCuti) textTombolCuti.textContent = 'Mengambil...';
+
+        const url = `/api/payroll/v1/periode/${encodeURIComponent(current.id)}/cuti?employeeId=${encodeURIComponent(empId)}`;
+
+        try {
+            const res = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${AUTH_TOKEN}`,
+                    'Accept': 'application/json',
+                },
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                renderLeaveResults(data);
+            } else {
+                let msg = data.message || 'Gagal mengambil data cuti dari layanan F-4.';
+                if (res.status === 403) {
+                    msg = 'Akses ditolak: Anda tidak memiliki izin untuk mengambil data cuti karyawan.';
+                } else if (res.status === 503) {
+                    msg = data.message || 'Layanan cuti F-4 tidak dapat dihubungi. Pastikan layanan F-4 berjalan pada port 3000.';
+                } else if (res.status === 404) {
+                    msg = data.message || 'Karyawan tidak ditemukan di referensi karyawan.';
+                }
+                textCutiError.textContent = msg;
+                setDisplay(alertCutiError, 'flex');
+            }
+        } catch (err) {
+            textCutiError.textContent = 'Gagal menghubungi server lokal. Periksa koneksi backend Laravel.';
+            setDisplay(alertCutiError, 'flex');
+        } finally {
+            isLoadingCuti = false;
+            if (btnAmbilCuti) btnAmbilCuti.disabled = false;
+            setDisplay(iconCutiSpinner, 'none');
+            setDisplay(iconCutiSearch, 'inline-block');
+            if (textTombolCuti) textTombolCuti.textContent = 'Ambil data cuti';
+        }
+    }
+
+    function renderLeaveResults(data) {
+        setDisplay(containerHasilCuti, 'block');
+        if (infoRentangCuti) {
+            infoRentangCuti.textContent = `${data.from} s.d. ${data.to} (${data.employeeId})`;
+        }
+        if (badgeTotalCuti) {
+            const totalCuti = data.totalCuti || 0;
+            const totalHari = data.totalHariCuti || 0;
+            badgeTotalCuti.textContent = `${totalCuti} pengajuan (${totalHari} hari kerja)`;
+        }
+
+        const items = Array.isArray(data.items) ? data.items : [];
+
+        if (items.length === 0) {
+            setDisplay(stateCutiKosong, 'block');
+            setDisplay(stateCutiTabel, 'none');
+            if (tbodyCuti) tbodyCuti.innerHTML = '';
+            return;
+        }
+
+        setDisplay(stateCutiKosong, 'none');
+        setDisplay(stateCutiTabel, 'block');
+
+        if (tbodyCuti) {
+            tbodyCuti.innerHTML = '';
+            items.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/50 transition-colors';
+
+                // Tanggal cuti
+                const tanggalTd = document.createElement('td');
+                tanggalTd.className = 'px-4 py-3 font-medium text-slate-900 whitespace-nowrap';
+                tanggalTd.textContent = `${item.startDate} s.d. ${item.endDate}`;
+
+                // Jenis cuti
+                const jenisTd = document.createElement('td');
+                jenisTd.className = 'px-4 py-3 text-slate-700 whitespace-nowrap';
+                jenisTd.textContent = formatLeaveType(item.leaveType);
+
+                // Hari kerja dalam periode
+                const rangeTd = document.createElement('td');
+                rangeTd.className = 'px-4 py-3 text-center font-semibold text-slate-900';
+                rangeTd.textContent = `${item.workingDaysInRange ?? item.workingDays} hari`;
+
+                // Total hari kerja pengajuan
+                const totalTd = document.createElement('td');
+                totalTd.className = 'px-4 py-3 text-center text-slate-500';
+                totalTd.textContent = `${item.workingDays} hari`;
+
+                // Keterangan dibayar
+                const paidTd = document.createElement('td');
+                paidTd.className = 'px-4 py-3 text-center';
+                const paidBadge = document.createElement('span');
+                paidBadge.className = item.paid
+                    ? 'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200';
+                paidBadge.textContent = item.paid ? 'Dibayar (paid)' : 'Tidak dibayar';
+                paidTd.appendChild(paidBadge);
+
+                // Status
+                const statusTd = document.createElement('td');
+                statusTd.className = 'px-4 py-3 text-center';
+                const statusBadge = document.createElement('span');
+                statusBadge.className = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200';
+                statusBadge.textContent = item.status || 'APPROVED';
+                statusTd.appendChild(statusBadge);
+
+                tr.appendChild(tanggalTd);
+                tr.appendChild(jenisTd);
+                tr.appendChild(rangeTd);
+                tr.appendChild(totalTd);
+                tr.appendChild(paidTd);
+                tr.appendChild(statusTd);
+
+                tbodyCuti.appendChild(tr);
+            });
+        }
+    }
+
+    if (btnAmbilCuti) {
+        btnAmbilCuti.addEventListener('click', ambilDataCuti);
+    }
+
+    if (inputEmployeeId) {
+        inputEmployeeId.addEventListener('input', clearLeaveResults);
+        inputEmployeeId.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                ambilDataCuti();
+            }
+        });
+    }
 
     // ── Inisialisasi Awal ────────────────────────────────────────────────────
 
