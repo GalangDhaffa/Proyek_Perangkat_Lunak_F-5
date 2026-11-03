@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'f4' => [
+        'base_url' => env('F4_BASE_URL', 'http://localhost:3000'),
+        'token' => env('F4_TOKEN', 'token-uji-f5'),
+        'timeout' => (int) env('F4_TIMEOUT', 5),
+        'connect_timeout' => (int) env('F4_CONNECT_TIMEOUT', 3),
+    ],
+
 ];

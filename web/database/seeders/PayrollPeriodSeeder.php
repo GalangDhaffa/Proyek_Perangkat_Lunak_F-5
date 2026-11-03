@@ -49,6 +49,15 @@ class PayrollPeriodSeeder extends Seeder
                 'tanggal_pembayaran' => '2026-11-01',
                 'status' => 'Draf',
             ],
+            [
+                'id' => '01a1193d-2500-7c07-854b-8bf03c711dde',
+                'uuid' => '01a1193d-2500-7c07-854b-8bf03c711dde',
+                'nama_periode' => 'November 2026',
+                'tanggal_mulai' => '2026-11-01',
+                'tanggalAkhir' => '2026-11-30',
+                'tanggal_pembayaran' => '2026-12-01',
+                'status' => 'Draf',
+            ],
         ];
 
         foreach ($periods as $item) {

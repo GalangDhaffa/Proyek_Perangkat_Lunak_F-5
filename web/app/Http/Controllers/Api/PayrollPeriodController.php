@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\PayrollPeriod;
+use App\Services\F4LeaveService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -225,6 +226,121 @@ class PayrollPeriodController extends Controller
         });
 
         return response()->json($period->fresh()->toResponseArray(), 200);
+    }
+
+    /**
+     * GET /api/payroll/v1/periode/{periodeId}/cuti?employeeId=EMP-001
+     * Mengambil data cuti karyawan pada periode payroll tersimpan dari layanan F-4.
+     */
+    public function getLeaveStatus(Request $request, string $periodeId, F4LeaveService $leaveService): JsonResponse
+    {
+        $role = $this->authenticate($request);
+        if ($role instanceof JsonResponse) {
+            return $role;
+        }
+
+        if (! in_array($role, self::ALLOWED_WRITE_ROLES, true)) {
+            return $this->forbidden('Hanya petugas atau admin payroll yang memiliki izin mengambil data cuti karyawan.');
+        }
+
+        if (! $this->isValidUuid($periodeId)) {
+            return $this->invalidPeriodId();
+        }
+
+        $period = $this->findPeriod($periodeId);
+        if ($period === null) {
+            return $this->periodNotFound();
+        }
+
+        $employeeId = $request->query('employeeId');
+        if ($employeeId === null || trim((string) $employeeId) === '') {
+            return response()->json([
+                'code' => 'VALIDATION_ERROR',
+                'message' => 'Parameter employeeId wajib diisi.',
+                'details' => [
+                    [
+                        'field' => 'employeeId',
+                        'message' => 'ID karyawan wajib diisi (contoh: EMP-001).',
+                    ],
+                ],
+            ], 400);
+        }
+
+        $employeeId = trim((string) $employeeId);
+        if (! preg_match('/^[A-Za-z0-9-]+$/', $employeeId) || strlen($employeeId) > 64) {
+            return response()->json([
+                'code' => 'INVALID_EMPLOYEE_ID',
+                'message' => 'employeeId tidak valid. Gunakan format ID referensi karyawan yang benar, contoh EMP-001.',
+                'details' => [
+                    [
+                        'field' => 'employeeId',
+                        'message' => 'Format employeeId hanya boleh berisi huruf, angka, dan tanda hubung maksimal 64 karakter.',
+                    ],
+                ],
+            ], 400);
+        }
+
+        $from = $period->tanggal_mulai ? Carbon::parse($period->tanggal_mulai)->format('Y-m-d') : null;
+        $to = $period->tanggal_akhir ? Carbon::parse($period->tanggal_akhir)->format('Y-m-d') : null;
+
+        if (empty($from) || empty($to)) {
+            return response()->json([
+                'code' => 'INVALID_PERIODE_DATES',
+                'message' => 'Tanggal periode belum lengkap pada database.',
+                'details' => [],
+            ], 400);
+        }
+
+        if ($to < $from) {
+            return response()->json([
+                'code' => 'INVALID_DATE_RANGE',
+                'message' => 'Tanggal akhir periode tidak boleh sebelum tanggal mulai.',
+                'details' => [],
+            ], 400);
+        }
+
+        $startDate = Carbon::parse($from);
+        $endDate = Carbon::parse($to);
+        $diffDaysInclusive = $startDate->diffInDays($endDate) + 1;
+
+        if ($diffDaysInclusive > 31) {
+            return response()->json([
+                'code' => 'RANGE_TOO_LONG',
+                'message' => "Rentang tanggal periode ({$diffDaysInclusive} hari) melebihi batas maksimal 31 hari inklusif layanan F-4.",
+                'details' => [
+                    [
+                        'field' => 'rentangTanggal',
+                        'message' => 'Layanan F-4 membatasi rentang tanggal status cuti maksimal 31 hari inklusif.',
+                    ],
+                ],
+            ], 400);
+        }
+
+        $result = $leaveService->getLeaveStatus($employeeId, $from, $to);
+
+        if (! $result['success']) {
+            return response()->json([
+                'code' => $result['code'] ?? 'UPSTREAM_ERROR',
+                'message' => $result['message'] ?? 'Gagal mengambil data cuti dari layanan F-4.',
+                'details' => [],
+            ], $result['status'] ?? 503);
+        }
+
+        $items = $result['data']['items'] ?? [];
+        $totalHariCuti = array_sum(array_column($items, 'workingDaysInRange'));
+
+        return response()->json([
+            'periodeId' => (string) ($period->uuid ?: $period->id),
+            'namaPeriode' => $period->nama_periode ?: PayrollPeriod::generateNamaPeriode($period->tanggal_mulai),
+            'tanggalMulai' => $from,
+            'tanggalAkhir' => $to,
+            'employeeId' => $employeeId,
+            'from' => $from,
+            'to' => $to,
+            'items' => $items,
+            'totalCuti' => count($items),
+            'totalHariCuti' => (int) $totalHariCuti,
+        ], 200);
     }
 
     /**

@@ -36,13 +36,14 @@ Coding ditangani Muhamad Rizky untuk frontend dan Arinal Haq untuk backend. Dhaf
 | P-10 | Data demo dan sumber periode | Arinal, Rizky untuk pemakaian UI | Terverifikasi di frontend. Dropdown periode memakai UUID fixture valid, kosong, termin saja, dan skenario galat. |
 | P-11 | Integrasi UI dengan endpoint Laravel | Rizky dan Arinal | Terverifikasi 20 Oktober 2026. Frontend fetch langsung ke backend tanpa fallback fixture. Kegagalan koneksi ditampilkan sebagai pesan error nyata. |
 | P-12 | Review konsumen E-2 | Dhaffa | Menunggu balasan. Pengguna menyatakan link repo sudah dikirim. |
-| P-13 | Review F-4 | Dhaffa, koordinasi dengan F-4 | Kesepakatan isi dilaporkan. Perlu kontrak revisi/commit dan pengujian request. |
+| P-13 | Review F-4 | Dhaffa, koordinasi dengan F-4 | Terverifikasi 04 November 2026. Integrasi API-K04-07 status cuti berhasil diterapkan pada backend dan frontend Periode Payroll. |
 | P-14 | Kontrak F-1, F-2, dan F-3 | Dhaffa berkoordinasi dengan tim | Kontrak belum diterima/diperiksa dalam sesi ini. Chat permintaan F-3 telah disusun, pengiriman belum dikonfirmasi. |
 | P-15 | Dokumen kontrak API final | Dhaffa | Direncanakan revisi. File yang diperiksa masih memuat status/tenggat lama. |
 | P-16 | Skenario uji dan laporan demo | Danny | Direncanakan. Template sudah dibaca, hasil demo Laravel belum tersedia. |
 | P-17 | Bukti, README, dan commit demo | Zaki | README web/ diperbarui 20 Oktober 2026 dengan panduan instalasi lengkap. Commit demo dan screenshot masih perlu dikerjakan. |
 | P-18 | Pedoman dan konteks bersama | Dhaffa | Ketiga file disusun di sesi ini. Penempatan pada komputer dan commit/push ke repo belum dikonfirmasi. |
 | P-19 | Fitur Periode Payroll (FTR-K05-01 / UI-K05-01) | Arinal (Backend) & Rizky (Frontend) | Terverifikasi 27 Oktober 2026. Database SQLite, Model Eloquent, REST API CRUD, validasi, otorisasi peran, UI lengkap dengan form tambah, edit, detail, validasi interaktif, sinkronisasi Rekap Biaya, 35 tes Laravel lulus, OpenAPI YAML/JSON tervalidasi. |
+| P-20 | Integrasi API Cuti F-4 pada Periode Payroll (Pertemuan 6) | Arinal (Backend) & Rizky (Frontend) | Terverifikasi 04 November 2026. Endpoint GET /api/payroll/v1/periode/{periodeId}/cuti, otorisasi peran petugas/admin payroll, service F4LeaveService dengan timeout & logging aman tanpa token, UI pratinjau cuti interaktif pada Periode Payroll, batas 31 hari inklusif, 14 tes fitur (HTTP Fake & live call F-4), total 56 tes PHPUnit lulus, OpenAPI YAML/JSON tervalidasi. |
 
 ## Bukti yang sudah diketahui
 
@@ -305,3 +306,47 @@ Langkah berikutnya:
 2. Zaki: periksa git status dan git diff, lalu lakukan commit manual.
 ```
 
+```text
+Tanggal dan jam: 04 November 2026, 01.40 WIB
+Anggota dan branch: Arinal Haq (Backend) & Muhamad Rizky (Frontend), branch main
+ID pekerjaan: P-13 (verifikasi integrasi F-4), P-20 (Integrasi API Cuti F-4 pada Fitur Periode Payroll untuk Pertemuan 6)
+Perubahan dan file terkait:
+- web/config/services.php, web/.env, web/.env.example:
+  Konfigurasi layanan F-4 (F4_BASE_URL=http://localhost:3000, F4_TOKEN=token-uji-f5, F4_TIMEOUT=5, F4_CONNECT_TIMEOUT=3). Token disimpan aman di backend dan tidak pernah dikirim ke browser.
+- web/app/Services/F4LeaveService.php:
+  Service HTTP Client untuk memanggil F-4 GET /api/v1/leave-status dengan timeout koneksi (3s) dan respons (5s), penanganan error terstruktur (400, 404, 502 upstream auth, 503 connection failure), serta pencatatan log waktu, parameter, dan status HTTP tanpa membocorkan token.
+- web/app/Http/Controllers/Api/PayrollPeriodController.php:
+  Penambahan method getLeaveStatus() untuk endpoint GET /api/payroll/v1/periode/{periodeId}/cuti?employeeId={ID}:
+  (1) Otorisasi peran ketat: dibatasi untuk petugas_payroll dan admin_payroll (peran non-payroll ditolak 403).
+  (2) Validasi UUID periode (400) dan pengecekan keberadaan di database SQLite (404).
+  (3) Validasi parameter employeeId wajib dan format regex [A-Za-z0-9-]+ maks 64 karakter (400).
+  (4) Pengecekan tanggal from dan to dari database, validasi urutan tanggal (400), dan penegakan batas maksimal 31 hari inklusif (400 RANGE_TOO_LONG).
+  (5) Pengembalian data cuti, totalCuti, dan totalHariCuti (sum workingDaysInRange) dalam format JSON standar.
+- web/routes/api.php:
+  Pendaftaran route GET /api/payroll/v1/periode/{periodeId}/cuti.
+- web/database/seeders/PayrollPeriodSeeder.php & SQLite DB:
+  Penambahan periode November 2026 (2026-11-01 s.d. 2026-11-30) agar cocok dengan data cuti aktual F-4 pada EMP-001 tanpa mereset atau menghapus data lain.
+- web/resources/views/periode-payroll.blade.php & web/resources/js/periode-payroll.js:
+  Penambahan panel UI "Data cuti karyawan" di bawah form data periode: input ID Karyawan (default EMP-001), tombol "Ambil data cuti" dengan spinner, penanganan loading, penanganan data kosong, alert error ramah pengguna (akses ditolak 403, layanan tidak terjangkau 503, karyawan tidak ditemukan 404), pembersihan hasil lama ketika periode atau input karyawan berubah atau request gagal (tanpa fallback fixture sukses palsu), dan rendering tabel cuti (tanggal cuti, jenis cuti, hari dlm periode, total pengajuan, badge keterangan dibayar, dan status APPROVED).
+- openapi.yaml & openapi.json:
+  Dokumentasi resmi endpoint GET /api/payroll/v1/periode/{periodeId}/cuti, schema PeriodePayrollCutiResponse, dan PeriodePayrollCutiItem. Kedua berkas divalidasi identik dan memenuhi standar OpenAPI 3.0.3.
+- web/tests/Feature/LeaveIntegrationTest.php:
+  14 skenario feature test lengkap: unauthorized 401 (tanpa token dan token salah), forbidden 403 untuk seluruh peran non-payroll, invalid UUID 400, not found 404, missing employeeId 400, invalid employeeId format 400, rentang > 31 hari 400 RANGE_TOO_LONG, sukses dengan HTTP Fake 200 (ANNUAL 3 hari), cuti kosong dengan HTTP Fake 200, koneksi terputus ditangani sebagai 503 SERVICE_UNAVAILABLE, upstream 404 diteruskan bersih, upstream 401/403 ditangani sebagai 502 UPSTREAM_AUTH_ERROR, serta live call integration langsung ke server F-4 di http://localhost:3000 (menghasilkan status 200, cuti ANNUAL 2026-11-16 s.d 2026-11-18, workingDays 3, workingDaysInRange 3, paid true).
+- web/README.md & README.md:
+  Dokumentasi konfigurasi F-4, batas 31 hari, batas integrasi (F-1 demo auth, F-4 employeeSource seed), dan petunjuk pengujian terminal serta antarmuka browser.
+Perintah yang benar-benar dijalankan:
+- php artisan test --filter=LeaveIntegrationTest --no-ansi -> 14 tests, 14 passed, 46 assertions. LULUS (100%).
+- php artisan test --no-ansi -> 56 tests, 56 passed, 193 assertions. LULUS (100%).
+- python -m unittest discover -s tests -v -> 10 tests. OK. LULUS (100%).
+- python validate_contract.py -> LULUS OpenAPI 3.0.3, referensi skema, format, YAML/JSON, dan contoh respons.
+- cd web; npm run build -> built in 1.47s, app-B90mDwzc.css 51.52 kB, app-Ol2mNNsZ.js 19.37 kB. LULUS.
+- curl.exe ke http://localhost:3000/api/v1/leave-status?employeeId=EMP-001&from=2026-11-01&to=2026-11-30 -> HTTP 200 OK (ANNUAL 3 hari).
+Hasil aktual: Seluruh 56 pengujian Laravel dan 10 pengujian Python lulus. Build aset frontend berhasil. Integrasi langsung ke layanan F-4 terverifikasi bekerja sempurna dengan data aktual.
+Lokasi bukti: web/tests/Feature/LeaveIntegrationTest.php, web/storage/logs/laravel.log, dan openapi.yaml/json.
+Commit yang diuji: Siap untuk ditinjau Zaki sebelum commit. Tidak ada commit/push otomatis.
+Hambatan: Tidak ada hambatan teknis. Modul F-1 masih memakai autentikasi demo dan F-4 memakai data seed.
+Langkah berikutnya:
+1. Zaki: Buka browser ke http://127.0.0.1:8001/periode-payroll, pilih periode November 2026, masukkan ID EMP-001, klik "Ambil data cuti" dan ambil screenshot tabel cuti sebagai bukti pertemuan 6.
+2. Zaki: Coba ganti ID ke EMP-999 (verifikasi error karyawan tidak ditemukan) dan coba matikan F-4 sementara untuk verifikasi pesan 503 layanan tidak terjangkau.
+3. Zaki: Periksa git status dan git diff, lalu lakukan commit manual.
+```
