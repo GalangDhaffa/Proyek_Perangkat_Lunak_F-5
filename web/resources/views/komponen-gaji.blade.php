@@ -134,17 +134,17 @@
                         id="select-karyawan"
                         class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-2xs"
                     >
-                        <option value="EMP-001" selected>EMP-001 &mdash; Karyawan 1 (Referensi F-2 / Seed Cuti F-4)</option>
+                        <option value="EMP-001" selected>EMP-001 &mdash; Referensi demo cuti F-4</option>
                         <option value="EMP-002">EMP-002 &mdash; Karyawan 2 (Data Demo Tambahan)</option>
                         <option value="EMP-003">EMP-003 &mdash; Karyawan 3 (Data Demo Tambahan)</option>
                         <option value="EMP-999">EMP-999 &mdash; Karyawan Baru (Belum Ada Konfigurasi)</option>
                     </select>
                     <p id="info-karyawan" class="text-[11px] text-slate-500 flex flex-wrap items-center gap-1.5 pt-1">
                         <span class="text-slate-400">Sumber ID:</span>
-                        <span id="text-karyawan-sumber" class="font-medium text-slate-700">Seed F-4 / Contoh F-2</span>
+                        <span id="text-karyawan-sumber" class="font-medium text-slate-700">Referensi demo cuti F-4</span>
                         <span class="text-slate-300">&bull;</span>
                         <span class="text-slate-400">Status Profil:</span>
-                        <span id="text-karyawan-profil" class="text-slate-500">Nama &amp; profil resmi menunggu integrasi API F-2</span>
+                        <span id="text-karyawan-profil" class="text-slate-500">Belum tersedia</span>
                     </p>
                 </div>
 

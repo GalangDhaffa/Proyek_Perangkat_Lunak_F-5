@@ -41,24 +41,34 @@
                 </div>
 
                 {{-- Navigation --}}
+                @php
+                    $activePid = request('periodeId');
+                    $activeEmpId = request('employeeId');
+                    $navParams = array_filter([
+                        'periodeId' => $activePid,
+                        'employeeId' => $activeEmpId,
+                    ]);
+                    $navQuery = !empty($navParams) ? '?' . http_build_query($navParams) : '';
+                    $periodeOnlyQuery = $activePid ? '?periodeId=' . urlencode($activePid) : '';
+                @endphp
                 <div class="p-4">
                     <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2">
                         Payroll &amp; Pembayaran
                     </div>
                     <nav class="space-y-1">
-                        <a href="{{ url('/periode-payroll') }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('periode-payroll*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                        <a href="{{ url('/periode-payroll' . $periodeOnlyQuery) }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('periode-payroll*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
                             Periode payroll
                         </a>
-                        <a href="{{ url('/komponen-gaji') }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('komponen-gaji*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                        <a href="{{ url('/komponen-gaji' . $navQuery) }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('komponen-gaji*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
                             Komponen gaji
                         </a>
-                        <a href="{{ url('/pratinjau-perhitungan') }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('pratinjau-perhitungan*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                        <a href="{{ url('/pratinjau-perhitungan' . $navQuery) }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('pratinjau-perhitungan*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
                             Pratinjau perhitungan
                         </a>
                         <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors">
                             Termin tenaga ahli
                         </a>
-                        <a href="{{ url('/rekap-biaya') }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('rekap-biaya*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                        <a href="{{ url('/rekap-biaya' . $periodeOnlyQuery) }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('rekap-biaya*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
                             Rekap biaya
                         </a>
                     </nav>

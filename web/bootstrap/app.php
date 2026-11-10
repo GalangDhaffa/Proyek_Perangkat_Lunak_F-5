@@ -19,4 +19,28 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                // Biarkan HTTP 4xx (validasi, unauthorized, forbidden, not found) ditangani normal
+                if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface && $e->getStatusCode() < 500) {
+                    return null;
+                }
+
+                // Catat detail exception ke log pengembang
+                \Illuminate\Support\Facades\Log::error('Server Exception [HTTP 500]: ' . $e->getMessage(), [
+                    'exception' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                // Respons ramah pengguna tanpa trace SQL
+                return response()->json([
+                    'code' => 'INTERNAL_SERVER_ERROR',
+                    'message' => 'Terjadi kendala pada server saat memproses permintaan. Silakan coba beberapa saat lagi.',
+                    'details' => [],
+                ], 500);
+            }
+        });
     })->create();
