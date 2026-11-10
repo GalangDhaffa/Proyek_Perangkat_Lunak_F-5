@@ -1,15 +1,15 @@
 <x-layouts.app>
     <x-slot:title>Pratinjau Perhitungan - Universal ERP</x-slot:title>
-    <x-slot:sessionUser>Petugas payroll &middot; Sesi demo</x-slot:sessionUser>
+    <x-slot:sessionUser>Petugas payroll &middot; autentikasi simulasi</x-slot:sessionUser>
     <x-slot:breadcrumb>Pratinjau perhitungan</x-slot:breadcrumb>
     <x-slot:pageTitle>Pratinjau perhitungan</x-slot:pageTitle>
     <x-slot:pageSubtitle>Kalkulasi rincian pendapatan kotor, bonus, potongan komponen, iuran BPJS, dan estimasi gaji bersih karyawan per periode.</x-slot:pageSubtitle>
 
     <x-slot:headerActions>
         <div class="flex flex-wrap items-center gap-2">
-            <span id="badge-api-mode" class="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                Mode demo
+            <span id="badge-api-mode" class="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                API Laravel · autentikasi simulasi
             </span>
             <a
                 id="btn-nav-ke-komponen"
@@ -42,7 +42,16 @@
         data-initial-periods='@json($periods ?? [])'
         data-selected-periode-id="{{ $selectedPeriodeId ?? '' }}"
         data-selected-employee-id="{{ $selectedEmployeeId ?? '' }}"
+        data-api-token="mock-payroll"
     >
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 p-4 bg-white border border-slate-200 rounded-xl">
+            <label for="select-data-mode" class="text-xs font-semibold text-slate-700">Sumber data</label>
+            <select id="select-data-mode" class="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500">
+                <option value="api" selected>API Laravel (autentikasi mock)</option>
+                <option value="demo">Mode demo lokal</option>
+            </select>
+            <p class="text-xs text-slate-500">Token mock-payroll hanya simulasi. Mode API menampilkan hasil backend dan tidak memakai data demo localStorage.</p>
+        </div>
 
         {{-- Alert Sukses --}}
         <div
@@ -540,4 +549,3 @@
 
     </div>
 </x-layouts.app>
-

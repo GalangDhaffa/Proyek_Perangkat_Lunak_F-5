@@ -38,6 +38,8 @@ class ExampleTest extends TestCase
         $response->assertSee('Komponen gaji');
         $response->assertSee('select-karyawan');
         $response->assertSee('select-periode');
+        $response->assertSee('select-data-mode');
+        $response->assertSee('mock-payroll');
     }
 
     /**
@@ -63,6 +65,8 @@ class ExampleTest extends TestCase
         $response->assertSee('select-karyawan');
         $response->assertSee('select-periode');
         $response->assertSee('btn-hitung-pratinjau');
+        $response->assertSee('select-data-mode');
+        $response->assertSee('mock-payroll');
     }
 
     /**

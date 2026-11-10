@@ -2,11 +2,8 @@
  * Komponen Gaji Frontend Module - ERP PT Anaheim Nimbus Universal (Kelompok 5 F-5)
  * Mendukung FTR-K05-02 dan UI-K05-02 (Figma node-id 5-46).
  *
- * Catatan Arsitektur:
- * - Kontrak API backend untuk komponen gaji belum tersedia (mode demo).
- * - Modul ini menggunakan dataset demo terpisah dengan penanda demo yang jelas.
- * - Validasi formulir dijalankan secara ketat di client-side.
- * - Perubahan disimpan di dalam in-memory state sesi demo browser tanpa mengubah basis data backend.
+ * Data API adalah pilihan awal. Dataset dan penyimpanan demo hanya dipakai jika
+ * pengguna memilih mode demo secara eksplisit.
  */
 
 // Format Rupiah standar ERP F-5
@@ -108,6 +105,8 @@ export function initKomponenGaji() {
     if (!root) return;
 
     // ── Elemen DOM ──────────────────────────────────────────────────────────
+    const selectDataMode       = document.getElementById('select-data-mode');
+    const badgeApiMode         = document.getElementById('badge-api-mode');
     const selectPeriode        = document.getElementById('select-periode');
     const selectKaryawan       = document.getElementById('select-karyawan');
     const btnNavKePeriode      = document.getElementById('btn-nav-ke-periode');
@@ -178,6 +177,77 @@ export function initKomponenGaji() {
     const DEMO_STALE_PREFIX   = 'erpf5_demo_stale_';
 
     const stateCache = new Map();
+    const apiStateCache = new Map();
+    const apiVersions = new Map();
+    const initialMode = new URLSearchParams(window.location.search).get('mode') === 'demo' ? 'demo' : 'api';
+    selectDataMode.value = initialMode;
+
+    function isApiMode() {
+        return selectDataMode.value === 'api';
+    }
+
+    function setModeBadge() {
+        badgeApiMode.textContent = isApiMode() ? 'API Laravel · autentikasi simulasi' : 'Mode demo lokal';
+        badgeApiMode.className = isApiMode()
+            ? 'inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full'
+            : 'inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full';
+        if (btnTogglePanelUji) btnTogglePanelUji.classList.toggle('hidden', isApiMode());
+        if (panelPengujian && isApiMode()) panelPengujian.classList.add('hidden');
+        if (btnIsiTemplate) btnIsiTemplate.classList.toggle('hidden', isApiMode());
+    }
+
+    function emptyComponentData(employeeId) {
+        return {
+            id: employeeId,
+            nama: employeeId,
+            jabatan: 'Belum tersedia',
+            departemen: 'Belum tersedia',
+            gajiPokok: 0,
+            bonus: 0,
+            bpjsKaryawan: 0,
+            bpjsPerusahaan: 0,
+            komponen: [],
+        };
+    }
+
+    async function requestPayrollApi(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${root.dataset.apiToken}`,
+                ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+                ...options.headers,
+            },
+        });
+        let body = {};
+        try {
+            body = await response.json();
+        } catch {
+            if (response.ok) throw new Error('Respons API payroll bukan JSON yang valid.');
+        }
+        if (!response.ok) {
+            const error = new Error(body.message || `Request API gagal (HTTP ${response.status}).`);
+            error.status = response.status;
+            error.code = body.code || `HTTP_${response.status}`;
+            error.details = Array.isArray(body.details) ? body.details : [];
+            throw error;
+        }
+        return body;
+    }
+
+    function showApiError(error, title = 'Gagal memuat komponen payroll') {
+        titleError.textContent = `${title} (${error.code || 'API_ERROR'})`;
+        textError.textContent = error.message || 'Terjadi kesalahan saat menghubungi API payroll.';
+        listError.innerHTML = '';
+        (error.details || []).forEach(detail => {
+            const li = document.createElement('li');
+            li.textContent = detail.message || detail.field || 'Periksa kembali data yang dikirim.';
+            listError.appendChild(li);
+        });
+        if (listError.children.length) show(listError);
+        show(alertError);
+    }
 
     function getStorageKey(periodeId, employeeId) {
         return `${periodeId || 'default'}:${employeeId || 'EMP-001'}`;
@@ -191,12 +261,19 @@ export function initKomponenGaji() {
         return `${DEMO_STALE_PREFIX}${periodeId || 'default'}_${employeeId || 'EMP-001'}`;
     }
 
+    function getApiStaleKey(periodeId, employeeId) {
+        return `erpf5_api_stale_${periodeId || 'default'}_${employeeId || 'EMP-001'}`;
+    }
+
     function getEmployeeData(employeeId) {
         return DEMO_EMPLOYEES.find(e => e.id === employeeId) || DEMO_EMPLOYEES[0];
     }
 
     function getWorkingData(periodeId, employeeId) {
         const key = getStorageKey(periodeId, employeeId);
+        if (isApiMode()) {
+            return apiStateCache.get(key) || emptyComponentData(employeeId);
+        }
         if (stateCache.has(key)) {
             return stateCache.get(key);
         }
@@ -224,6 +301,10 @@ export function initKomponenGaji() {
     function setWorkingData(periodeId, employeeId, data, persistToStorage = false) {
         const key = getStorageKey(periodeId, employeeId);
         const cloned = JSON.parse(JSON.stringify(data));
+        if (isApiMode()) {
+            apiStateCache.set(key, cloned);
+            return;
+        }
         stateCache.set(key, cloned);
 
         if (persistToStorage) {
@@ -278,6 +359,7 @@ export function initKomponenGaji() {
         const params = new URLSearchParams();
         if (currentPid) params.set('periodeId', currentPid);
         if (currentEmpId) params.set('employeeId', currentEmpId);
+        params.set('mode', isApiMode() ? 'api' : 'demo');
 
         const paramString = params.toString() ? '?' + params.toString() : '';
 
@@ -389,6 +471,84 @@ export function initKomponenGaji() {
         // Hitung Total Real-time
         recalculateTotals();
         updateNavigationLinks();
+    }
+
+    async function loadApiComponents() {
+        if (!isApiMode()) {
+            hide(stateLoading);
+            show(formKomponenGaji);
+            renderForm();
+            return;
+        }
+
+        const periodeId = selectPeriode.value;
+        const employeeId = selectKaryawan.value;
+        const key = getStorageKey(periodeId, employeeId);
+        const requestId = (loadApiComponents.requestId || 0) + 1;
+        loadApiComponents.requestId = requestId;
+        let loadError = null;
+
+        hideAlerts();
+        hide(formKomponenGaji);
+        hide(stateEmptyBanner);
+        show(stateLoading);
+
+        try {
+            if (!periodeId || !employeeId) {
+                throw Object.assign(new Error('Pilih periode dan karyawan terlebih dahulu.'), { code: 'INVALID_SELECTION' });
+            }
+            const params = new URLSearchParams({ employeeId });
+            const result = await requestPayrollApi(
+                `/api/payroll/v1/periode/${encodeURIComponent(periodeId)}/komponen?${params.toString()}`
+            );
+            if (requestId !== loadApiComponents.requestId) return;
+            if (
+                result.employeeId !== employeeId ||
+                !Number.isFinite(result.gajiPokok) ||
+                !Number.isFinite(result.bonus) ||
+                !Number.isFinite(result.bpjsKaryawan) ||
+                !Number.isFinite(result.bpjsPerusahaan) ||
+                !Number.isInteger(Number(result.versiKomponen)) ||
+                !Array.isArray(result.komponen) ||
+                !result.komponen.every(item =>
+                    item &&
+                    typeof item.nama === 'string' &&
+                    ['pendapatan', 'potongan'].includes(item.jenis) &&
+                    Number.isFinite(item.nominal) &&
+                    typeof item.aktif === 'boolean'
+                )
+            ) {
+                throw Object.assign(new Error('Format respons komponen payroll tidak valid.'), { code: 'INVALID_API_RESPONSE' });
+            }
+            apiVersions.set(key, Number(result.versiKomponen));
+            apiStateCache.set(key, {
+                ...emptyComponentData(employeeId),
+                gajiPokok: Number(result.gajiPokok),
+                bonus: Number(result.bonus),
+                bpjsKaryawan: Number(result.bpjsKaryawan),
+                bpjsPerusahaan: Number(result.bpjsPerusahaan),
+                komponen: result.komponen.map(item => ({
+                    nama: item.nama,
+                    jenis: item.jenis,
+                    nominal: Number(item.nominal),
+                    aktif: item.aktif === true,
+                })),
+            });
+        } catch (error) {
+            if (requestId !== loadApiComponents.requestId) return;
+            apiVersions.set(key, 0);
+            apiStateCache.set(key, emptyComponentData(employeeId));
+            if (error.code !== 'PAYROLL_COMPONENT_NOT_FOUND') {
+                loadError = error;
+            }
+        } finally {
+            if (requestId === loadApiComponents.requestId) {
+                hide(stateLoading);
+                show(formKomponenGaji);
+                renderForm();
+                if (loadError) showApiError(loadError);
+            }
+        }
     }
 
     function renderKomponenRows(komponenList) {
@@ -790,7 +950,7 @@ export function initKomponenGaji() {
     }
 
     // ── Submit Formulir (Simpan Komponen) ────────────────────────────────────
-    formKomponenGaji.addEventListener('submit', (e) => {
+    formKomponenGaji.addEventListener('submit', async (e) => {
         e.preventDefault();
         hideAlerts();
 
@@ -810,30 +970,65 @@ export function initKomponenGaji() {
             return;
         }
 
-        // Mulai proses simpan lokal (Simulasi delay UI 350ms)
+        syncWorkingDataFromDom();
+        const currentPeriodeId = selectPeriode.value;
+        const currentEmpId = selectKaryawan.value;
+        const currentEmp = getWorkingData(currentPeriodeId, currentEmpId);
+
         btnSimpanKomponen.disabled = true;
         show(iconSimpanSpinner);
         textTombolSimpan.textContent = 'Menyimpan…';
 
-        setTimeout(() => {
-            syncWorkingDataFromDom();
-
-            const currentPeriodeId = selectPeriode.value;
-            const currentEmpId = selectKaryawan.value;
-            const currentEmp = getWorkingData(currentPeriodeId, currentEmpId);
-            // Simpan ke shared demo storage dan tandai stale untuk pratinjau
-            setWorkingData(currentPeriodeId, currentEmpId, currentEmp, true);
-
-            const namaPeriode = selectPeriode.options[selectPeriode.selectedIndex]?.textContent || 'Periode Terpilih';
-
+        try {
+            if (isApiMode()) {
+                const key = getStorageKey(currentPeriodeId, currentEmpId);
+                const nextVersion = Math.max(1, (apiVersions.get(key) || 0) + 1);
+                const payload = {
+                    employeeId: currentEmpId,
+                    gajiPokok: Number(currentEmp.gajiPokok),
+                    bonus: Number(currentEmp.bonus),
+                    bpjsKaryawan: Number(currentEmp.bpjsKaryawan),
+                    bpjsPerusahaan: Number(currentEmp.bpjsPerusahaan),
+                    versiKomponen: nextVersion,
+                    komponen: currentEmp.komponen.map(item => ({
+                        nama: item.nama,
+                        jenis: item.jenis,
+                        nominal: Number(item.nominal),
+                        aktif: item.aktif === true,
+                    })),
+                };
+                const saved = await requestPayrollApi(
+                    `/api/payroll/v1/periode/${encodeURIComponent(currentPeriodeId)}/komponen`,
+                    { method: 'PUT', body: JSON.stringify(payload) }
+                );
+                apiVersions.set(key, Number(saved.versiKomponen));
+                apiStateCache.set(key, {
+                    ...currentEmp,
+                    gajiPokok: Number(saved.gajiPokok),
+                    bonus: Number(saved.bonus),
+                    bpjsKaryawan: Number(saved.bpjsKaryawan),
+                    bpjsPerusahaan: Number(saved.bpjsPerusahaan),
+                    komponen: saved.komponen,
+                });
+                try {
+                    localStorage.setItem(getApiStaleKey(currentPeriodeId, currentEmpId), 'true');
+                } catch (storageError) {
+                    console.warn('[komponen-gaji] Gagal menandai pratinjau API sebagai stale:', storageError);
+                }
+                textSukses.textContent = `Komponen gaji untuk ${currentEmpId} berhasil disimpan melalui API Laravel. Pratinjau perlu dihitung ulang.`;
+            } else {
+                setWorkingData(currentPeriodeId, currentEmpId, currentEmp, true);
+                textSukses.textContent = `Komponen gaji untuk ${currentEmp.nama} (${currentEmp.id}) berhasil disimpan di penyimpanan demo lokal.`;
+            }
+            show(alertSukses);
+            alertSukses.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (error) {
+            showApiError(error, 'Gagal menyimpan komponen payroll');
+        } finally {
             btnSimpanKomponen.disabled = false;
             hide(iconSimpanSpinner);
             textTombolSimpan.textContent = 'Simpan komponen';
-
-            textSukses.textContent = `Komponen gaji untuk ${currentEmp.nama} (${currentEmp.id}) pada ${namaPeriode} berhasil divalidasi dan disimpan ke penyimpanan demo bersama. Pratinjau perhitungan ditandai perlu dihitung ulang.`;
-            show(alertSukses);
-            alertSukses.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 350);
+        }
     });
 
     // ── Input Listeners Gaji Pokok & Agregat ──────────────────────────────────
@@ -873,9 +1068,13 @@ export function initKomponenGaji() {
 
     // ── Reset Formulir ──────────────────────────────────────────────────────
     if (btnResetForm) {
-        btnResetForm.addEventListener('click', () => {
+        btnResetForm.addEventListener('click', async () => {
             const currentPeriodeId = selectPeriode.value;
             const currentEmpId = selectKaryawan.value;
+            if (isApiMode()) {
+                await loadApiComponents();
+                return;
+            }
             try {
                 localStorage.removeItem(getSharedStorageKey(currentPeriodeId, currentEmpId));
                 localStorage.setItem(getSharedStaleKey(currentPeriodeId, currentEmpId), 'true');
@@ -890,9 +1089,13 @@ export function initKomponenGaji() {
     }
 
     // ── Ganti Karyawan atau Periode (Loading State) ──────────────────────────
-    function switchContextWithLoading() {
+    async function switchContextWithLoading() {
         hideAlerts();
         updateNavigationLinks();
+        if (isApiMode()) {
+            await loadApiComponents();
+            return;
+        }
         show(stateLoading);
         hide(formKomponenGaji);
         hide(stateEmptyBanner);
@@ -914,6 +1117,19 @@ export function initKomponenGaji() {
             switchContextWithLoading();
         });
     }
+
+    selectDataMode.addEventListener('change', () => {
+        setModeBadge();
+        updateNavigationLinks();
+        hideAlerts();
+        if (isApiMode()) {
+            loadApiComponents();
+        } else {
+            hide(stateLoading);
+            show(formKomponenGaji);
+            renderForm();
+        }
+    });
 
     // Close buttons for alerts
     if (btnCloseAlertSukses) {
@@ -991,8 +1207,13 @@ export function initKomponenGaji() {
     }
 
     // ── Inisialisasi Pertama Kali ───────────────────────────────────────────
+    setModeBadge();
     updatePeriodeMeta();
-    renderForm();
+    if (isApiMode()) {
+        loadApiComponents();
+    } else {
+        renderForm();
+    }
 }
 
 // Jalankan otomatis saat DOM siap
@@ -1001,4 +1222,3 @@ if (document.readyState === 'loading') {
 } else {
     initKomponenGaji();
 }
-
