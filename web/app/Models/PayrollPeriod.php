@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class PayrollPeriod extends Model
@@ -31,6 +32,11 @@ class PayrollPeriod extends Model
         'tanggal_akhir' => 'date:Y-m-d',
         'tanggal_pembayaran' => 'date:Y-m-d',
     ];
+
+    public function payrollComponents(): HasMany
+    {
+        return $this->hasMany(PayrollComponent::class);
+    }
 
     protected static function booted(): void
     {

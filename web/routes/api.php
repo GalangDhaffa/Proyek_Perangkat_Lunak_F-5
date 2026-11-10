@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\PayrollComponentController;
 use App\Http\Controllers\Api\PayrollPeriodController;
 use App\Http\Controllers\Api\RekapBiayaController;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +13,9 @@ Route::prefix('payroll/v1')->group(function () {
     Route::get('/periode', [PayrollPeriodController::class, 'index']);
     Route::post('/periode', [PayrollPeriodController::class, 'store']);
     Route::get('/periode/{periodeId}', [PayrollPeriodController::class, 'show']);
+    Route::get('/periode/{periodeId}/komponen', [PayrollComponentController::class, 'show']);
+    Route::put('/periode/{periodeId}/komponen', [PayrollComponentController::class, 'update']);
+    Route::post('/periode/{periodeId}/pratinjau', [PayrollComponentController::class, 'preview']);
     Route::put('/periode/{periodeId}', [PayrollPeriodController::class, 'updateFull']);
     Route::patch('/periode/{periodeId}', [PayrollPeriodController::class, 'updatePartial']);
 

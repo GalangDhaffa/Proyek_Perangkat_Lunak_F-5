@@ -122,6 +122,20 @@ Error F-5 berbentuk `code`, `message`, dan `details`. Rekap tidak mengirim data 
 
 Contoh utama memiliki pendapatan 7.750.000, bonus 750.000 yang sudah termasuk pendapatan, potongan komponen 200.000, BPJS karyawan 65.000, gaji bersih 7.485.000, BPJS perusahaan 260.000, dan termin 25.000.000. Ini angka fiktif untuk konsistensi demo, bukan data perusahaan.
 
+## Implementasi minimum komponen dan pratinjau payroll
+
+Pada 10 November 2026, pengguna mengonfirmasi bentuk implementasi backend berikut. Ini belum menjadi kontrak kelompok yang direview dan belum menggantikan OpenAPI aktif:
+
+- GET `/api/payroll/v1/periode/{periodeId}/komponen?employeeId={employeeId}` membaca satu rekaman komponen per karyawan dan periode.
+- PUT `/api/payroll/v1/periode/{periodeId}/komponen` menerima `employeeId`, `gajiPokok`, `bonus`, `bpjsKaryawan`, `bpjsPerusahaan`, `versiKomponen`, dan `komponen`.
+- `komponen` disimpan sebagai JSON array berisi `{nama, jenis, nominal, aktif}`. `jenis` bernilai `pendapatan` atau `potongan`.
+- POST `/api/payroll/v1/periode/{periodeId}/pratinjau` menerima satu `employeeId`; data gaji dibaca dari komponen tersimpan.
+- Pendapatan adalah gaji pokok ditambah komponen pendapatan aktif dan bonus. Potongan hanya menjumlahkan komponen potongan aktif. Gaji bersih mengurangi BPJS karyawan secara terpisah. BPJS perusahaan ditampilkan terpisah.
+- Pratinjau mengambil status cuti aktual melalui `F4LeaveService`. Data cuti ditampilkan sebagai informasi dan tidak mengubah rumus gaji di atas.
+- Endpoint dibatasi ke peran petugas payroll dan admin payroll mengikuti pola API cuti yang ada.
+
+OpenAPI saat ini masih berfokus pada rekap biaya dan operasi periode/cuti. Sinkronisasi kontrak resmi serta integrasi frontend masih perlu dikoordinasikan. Catatan progres implementasi dan batas uji ada di [PROGRESS.md](PROGRESS.md).
+
 ## Hubungan antarkelompok
 
 | Kelompok | Hubungan dengan F-5 | Hal yang perlu disepakati |

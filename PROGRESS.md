@@ -45,9 +45,10 @@ Coding ditangani Muhamad Rizky untuk frontend dan Arinal Haq untuk backend. Dhaf
 | P-19 | Fitur Periode Payroll (FTR-K05-01 / UI-K05-01) | Arinal (Backend) & Rizky (Frontend) | Terverifikasi 27 Oktober 2026. Database SQLite, Model Eloquent, REST API CRUD, validasi, otorisasi peran, UI lengkap dengan form tambah, edit, detail, validasi interaktif, sinkronisasi Rekap Biaya, 35 tes Laravel lulus, OpenAPI YAML/JSON tervalidasi. |
 | P-20 | Integrasi API Cuti F-4 pada Periode Payroll (Pertemuan 6) | Arinal (Backend) & Rizky (Frontend) | Terverifikasi 04 November 2026. Endpoint GET /api/payroll/v1/periode/{periodeId}/cuti, otorisasi peran petugas/admin payroll, service F4LeaveService dengan timeout & logging aman tanpa token, UI pratinjau cuti interaktif pada Periode Payroll, batas 31 hari inklusif, 14 tes fitur (HTTP Fake & live call F-4), total 56 tes PHPUnit lulus, OpenAPI YAML/JSON tervalidasi. |
 | P-21 | Komponen Gaji (FTR-K05-02 / UI-K05-02) & Sinkronisasi Pratinjau | Muhamad Rizky (Frontend) | Terverifikasi 10 November 2026. Halaman /komponen-gaji, manajemen komponen per periode dan karyawan, penyimpanan demo bersama via localStorage, sinkronisasi periodeId, penanda hitung ulang saat komponen diubah. |
-| P-22 | Pratinjau Perhitungan (FTR-K05-04 / UI-K05-04) | Muhamad Rizky (Frontend) | Terverifikasi 10 November 2026. Halaman /pratinjau-perhitungan, 4 kartu ringkasan, rincian pendapatan & potongan, kalkulasi demo sesuai aturan (bonus masuk pendapatan, BPJS terpisah, BPJS perusahaan tidak memotong gaji bersih), penanda hasil kedaluwarsa (stale). |
-| P-23 | Pemeriksaan Frontend & Penyelarasan Mode Demo | Muhamad Rizky (Frontend) | Terverifikasi 10 November 2026. Penyelesaian masalah tabel payroll_periods SQLite, konsistensi periodeId lintas 4 halaman, referensi resmi EMP-001 tanpa nama karangan, penyeragaman penanda Mode demo. |
-| P-24 | Halaman Termin Tenaga Ahli (FTR-K05-08 / UI-K05-08) | Muhamad Rizky (Frontend) | Terverifikasi 11 November 2026. Rute /termin-tenaga-ahli, tautan sidebar, daftar termin, 4 kartu KPI, filter status dan pencarian, modal detail termin, modal form tambah & ubah termin dengan validasi inline, adapter demo localStorage terpisah berlabel Mode demo, penyelarasan pesan transparan tanpa klaim otomatis masuk Rekap Biaya, 65 tes PHPUnit lulus, build Vite sukses. |
+| P-22 | Pratinjau Perhitungan (FTR-K05-04 / UI-K05-04) | Muhamad Rizky (Frontend) | Terverifikasi 10 November 2026. Halaman /pratinjau-perhitungan, ringkasan dan rincian pendapatan serta potongan, kalkulasi demo dengan bonus termasuk pendapatan, BPJS karyawan terpisah, dan BPJS perusahaan tidak mengurangi gaji bersih. |
+| P-23 | Pemeriksaan Frontend & Penyelarasan Mode Demo | Muhamad Rizky (Frontend) | Terverifikasi 10 November 2026. Penyelesaian masalah tabel payroll_periods SQLite, konsistensi periodeId lintas halaman, label EMP-001 sebagai referensi demo cuti F-4, dan penyeragaman penanda Mode demo. Pemetaan identitas F-2 belum dikonfirmasi. |
+| P-24 | Halaman Termin Tenaga Ahli (FTR-K05-08 / UI-K05-08) | Muhamad Rizky (Frontend) | Terverifikasi 11 November 2026. Rute /termin-tenaga-ahli, sidebar, daftar termin, kartu ringkasan, filter, pencarian, modal detail dan form, serta adapter demo localStorage terpisah. Pesan tidak lagi mengklaim otomatis masuk Rekap Biaya. Dilaporkan 65 tes PHPUnit lulus dan build Vite sukses pada branch frontend. |
+| P-25 | Backend komponen gaji dan pratinjau payroll | Arinal Haq (Backend) | Dilaporkan terverifikasi 10 November 2026. Migration/model komponen per periode dan karyawan, GET/PUT komponen dengan upsert transaksional, POST pratinjau dengan komponen aktif dan F4LeaveService, validasi serta otorisasi payroll/admin. Tes khusus: 8 lulus, 39 assertions. Suite fitur: 69 tes, 68 lulus, 1 dilewati, 247 assertions. F-4 pada pratinjau diuji dengan HTTP Fake. OpenAPI belum diselaraskan dan frontend belum dihubungkan. |
 
 ## Bukti yang sudah diketahui
 
@@ -528,4 +529,37 @@ Langkah berikutnya:
 2. Zaki: Ambil screenshot bukti UI-K05-08 untuk folder bukti/.
 3. Zaki: Periksa git status dan git diff, lalu lakukan commit terverifikasi pada branch kerja.
 4. Arinal: Saat jadwal pengembangan backend termin tiba (ENT-K05-13/15), buat controller dan API backend termin dengan menggantikan adapter demo localStorage.
+```
+
+```text
+Tanggal dan jam: 10 November 2026, 23.39 WIB
+Anggota dan branch: Arinal Haq (Backend), branch feat/komponen-preview-backend
+ID pekerjaan: P-25 (Implementasi backend minimum Komponen Gaji dan Pratinjau Payroll)
+Perubahan dan file terkait:
+- web/database/migrations/2026_11_10_165358_create_payroll_components_table.php:
+  Membuat tabel payroll_components dengan FK payroll_period_id, employee_id, nominal payroll, komponen JSON, versi, unique periode/karyawan, dan cascade saat periode dihapus.
+- web/app/Models/PayrollComponent.php, web/app/Models/PayrollPeriod.php, dan factory terkait:
+  Menambahkan cast, relasi Eloquent, dan data factory untuk pengujian.
+- web/routes/api.php dan web/app/Http/Controllers/Api/PayrollComponentController.php:
+  Menambahkan GET/PUT komponen dan POST pratinjau. PUT memvalidasi payload lalu mengganti satu rekaman di transaksi. Pratinjau menggunakan komponen aktif, rumus nominal yang diminta, dan F4LeaveService untuk mengambil data cuti.
+- web/tests/Feature/PayrollComponentApiTest.php:
+  Menguji upsert tidak menggandakan record, payload tidak valid tidak membuat data parsial, GET, akurasi rumus, pemanggilan F-4, error upstream, respons F-4 rusak, dan batas peran.
+- PROJECT_CONTEXT.md:
+  Mencatat format JSON dan cakupan pratinjau yang dikonfirmasi pengguna, dengan status belum menjadi kontrak kelompok yang direview.
+Perintah dan hasil aktual:
+- php artisan test tests/Feature/PayrollComponentApiTest.php -> 8 passed, 39 assertions.
+- php artisan test tests/Feature -> 69 tests, 68 passed, 1 skipped, 247 assertions.
+- Pint --test pada file backend baru, route, dan test -> lulus.
+- php artisan route:list --path=payroll/v1 -> ketiga endpoint baru terdaftar.
+- git diff --check -> lulus.
+Batas:
+- Pemanggilan F-4 diuji menggunakan HTTP Fake. Integrasi langsung F-4 tidak dijalankan untuk fitur pratinjau ini.
+- UI Komponen Gaji/Pratinjau masih mode demo dan endpoint frontend belum diselaraskan. Catatan P-23 juga menyebut path demo yang berbeda.
+- openapi.yaml/json belum diperbarui karena kontrak resmi belum ditinjau untuk bentuk payload dan respons fitur ini.
+- Laravel Boost dipasang mengikuti instruksi setup web/CLAUDE.md; composer.json/lock, web/CLAUDE.md, serta konfigurasi dan skill Boost turut berubah.
+Langkah berikutnya:
+1. Koordinasikan bentuk request/response dan endpoint dengan Rizky, lalu hubungkan UI tanpa fallback sukses palsu.
+2. Selaraskan openapi.yaml dan openapi.json setelah kontrak fitur disepakati.
+3. Jalankan uji integrasi langsung dengan F-4 aktif dan dokumentasikan hasil aktual.
+4. Tinjau diff serta file hasil setup Boost sebelum commit.
 ```
