@@ -13,16 +13,21 @@
                 <label for="select-periode" class="block text-xs font-semibold text-slate-700">
                     Periode rekap
                 </label>
-                <select id="select-periode" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors min-w-56">
-                    <option value="01a1193d-2500-7c04-854b-8bf03c711dde" selected>
-                        Oktober 2026 — Payroll &amp; Termin
-                    </option>
-                    <option value="01a1193d-2500-7c05-854b-8bf03c711dde">
-                        Oktober 2026 — Belum ada transaksi
-                    </option>
-                    <option value="01a1193d-2500-7c06-854b-8bf03c711dde">
-                        Oktober 2026 — Termin saja
-                    </option>
+                <select id="select-periode" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors min-w-56 cursor-pointer">
+                    @forelse($periods ?? [] as $p)
+                        @php
+                            $pUuid = $p->uuid ?: $p->id;
+                            $pNama = $p->nama_periode ?: \App\Models\PayrollPeriod::generateNamaPeriode($p->tanggal_mulai);
+                            $isSelected = ($selectedPeriodeId && strtolower($selectedPeriodeId) === strtolower($pUuid)) || (!$selectedPeriodeId && strtolower($pUuid) === '01a1193d-2500-7c04-854b-8bf03c711dde');
+                        @endphp
+                        <option value="{{ $pUuid }}" {{ $isSelected ? 'selected' : '' }}>
+                            {{ $pNama }} ({{ $p->status ?? 'Draf' }})
+                        </option>
+                    @empty
+                        <option value="01a1193d-2500-7c04-854b-8bf03c711dde" selected>
+                            Oktober 2026 (contoh fiktif) (Disetujui)
+                        </option>
+                    @endforelse
                 </select>
             </div>
 
