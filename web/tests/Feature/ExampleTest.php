@@ -105,4 +105,40 @@ class ExampleTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('01a1193d-2500-7c04-854b-8bf03c711dde');
     }
+
+    /**
+     * Halaman termin tenaga ahli dapat diakses dan mengembalikan status 200 (Mode demo).
+     */
+    public function test_termin_tenaga_ahli_page_returns_successful_response(): void
+    {
+        $response = $this->get('/termin-tenaga-ahli');
+
+        $response->assertStatus(200);
+        $response->assertSee('Termin tenaga ahli');
+        $response->assertSee('select-periode');
+        $response->assertSee('select-filter-status');
+        $response->assertSee('btn-buka-tambah-termin');
+        $response->assertSee('Mode demo');
+    }
+
+    /**
+     * Halaman termin tenaga ahli mendukung retensi query param periodeId.
+     */
+    public function test_termin_tenaga_ahli_page_with_periode_id_query_param(): void
+    {
+        $response = $this->get('/termin-tenaga-ahli?periodeId=01a1193d-2500-7c04-854b-8bf03c711dde');
+
+        $response->assertStatus(200);
+        $response->assertSee('01a1193d-2500-7c04-854b-8bf03c711dde');
+    }
+
+    /**
+     * Sidebar memuat tautan ke /termin-tenaga-ahli.
+     */
+    public function test_sidebar_contains_termin_tenaga_ahli_link(): void
+    {
+        $response = $this->get('/rekap-biaya');
+        $response->assertStatus(200);
+        $response->assertSee('/termin-tenaga-ahli');
+    }
 }

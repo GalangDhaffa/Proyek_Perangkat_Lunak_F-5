@@ -44,7 +44,11 @@ Coding ditangani Muhamad Rizky untuk frontend dan Arinal Haq untuk backend. Dhaf
 | P-18 | Pedoman dan konteks bersama | Dhaffa | Ketiga file disusun di sesi ini. Penempatan pada komputer dan commit/push ke repo belum dikonfirmasi. |
 | P-19 | Fitur Periode Payroll (FTR-K05-01 / UI-K05-01) | Arinal (Backend) & Rizky (Frontend) | Terverifikasi 27 Oktober 2026. Database SQLite, Model Eloquent, REST API CRUD, validasi, otorisasi peran, UI lengkap dengan form tambah, edit, detail, validasi interaktif, sinkronisasi Rekap Biaya, 35 tes Laravel lulus, OpenAPI YAML/JSON tervalidasi. |
 | P-20 | Integrasi API Cuti F-4 pada Periode Payroll (Pertemuan 6) | Arinal (Backend) & Rizky (Frontend) | Terverifikasi 04 November 2026. Endpoint GET /api/payroll/v1/periode/{periodeId}/cuti, otorisasi peran petugas/admin payroll, service F4LeaveService dengan timeout & logging aman tanpa token, UI pratinjau cuti interaktif pada Periode Payroll, batas 31 hari inklusif, 14 tes fitur (HTTP Fake & live call F-4), total 56 tes PHPUnit lulus, OpenAPI YAML/JSON tervalidasi. |
-| P-21 | Backend komponen gaji dan pratinjau payroll | Arinal (Backend) | Terverifikasi 10 November 2026: migration/model komponen per periode dan karyawan, GET/PUT komponen dengan upsert transaksional, POST pratinjau per karyawan dengan rumus aktif dan pemanggilan F4LeaveService, validasi serta otorisasi payroll/admin. 8 tes khusus lulus (39 assertion); seluruh 69 tes fitur lulus kecuali 1 tes live F-4 yang dilewati. OpenAPI belum diselaraskan dan frontend belum dihubungkan. |
+| P-21 | Komponen Gaji (FTR-K05-02 / UI-K05-02) & Sinkronisasi Pratinjau | Muhamad Rizky (Frontend) | Terverifikasi 10 November 2026. Halaman /komponen-gaji, manajemen komponen per periode dan karyawan, penyimpanan demo bersama via localStorage, sinkronisasi periodeId, penanda hitung ulang saat komponen diubah. |
+| P-22 | Pratinjau Perhitungan (FTR-K05-04 / UI-K05-04) | Muhamad Rizky (Frontend) | Terverifikasi 10 November 2026. Halaman /pratinjau-perhitungan, ringkasan dan rincian pendapatan serta potongan, kalkulasi demo dengan bonus termasuk pendapatan, BPJS karyawan terpisah, dan BPJS perusahaan tidak mengurangi gaji bersih. |
+| P-23 | Pemeriksaan Frontend & Penyelarasan Mode Demo | Muhamad Rizky (Frontend) | Terverifikasi 10 November 2026. Penyelesaian masalah tabel payroll_periods SQLite, konsistensi periodeId lintas halaman, label EMP-001 sebagai referensi demo cuti F-4, dan penyeragaman penanda Mode demo. Pemetaan identitas F-2 belum dikonfirmasi. |
+| P-24 | Halaman Termin Tenaga Ahli (FTR-K05-08 / UI-K05-08) | Muhamad Rizky (Frontend) | Terverifikasi 11 November 2026. Rute /termin-tenaga-ahli, sidebar, daftar termin, kartu ringkasan, filter, pencarian, modal detail dan form, serta adapter demo localStorage terpisah. Pesan tidak lagi mengklaim otomatis masuk Rekap Biaya. Dilaporkan 65 tes PHPUnit lulus dan build Vite sukses pada branch frontend. |
+| P-25 | Backend komponen gaji dan pratinjau payroll | Arinal Haq (Backend) | Dilaporkan terverifikasi 10 November 2026. Migration/model komponen per periode dan karyawan, GET/PUT komponen dengan upsert transaksional, POST pratinjau dengan komponen aktif dan F4LeaveService, validasi serta otorisasi payroll/admin. Tes khusus: 8 lulus, 39 assertions. Suite fitur: 69 tes, 68 lulus, 1 dilewati, 247 assertions. F-4 pada pratinjau diuji dengan HTTP Fake. OpenAPI belum diselaraskan dan frontend belum dihubungkan. |
 
 ## Bukti yang sudah diketahui
 
@@ -468,10 +472,69 @@ Hasil aktual: Seluruh 5 poin pemeriksaan berhasil diselesaikan: error API period
 Commit yang diuji: Siap untuk commit dan push ke GitHub oleh Zaki/tim.
 ```
 
+
+```text
+Tanggal dan jam: 11 November 2026, 00.20 WIB
+Anggota dan branch: Muhamad Rizky (Frontend), branch feat/termin-ui
+ID pekerjaan: P-24 (Halaman Termin Tenaga Ahli: FTR-K05-08, UI-K05-08)
+Perubahan dan file terkait:
+- web/routes/web.php:
+  Pendaftaran route GET /termin-tenaga-ahli dengan pembacaan query parameter ?periodeId= serta pengiriman data daftar periode payroll ke view.
+- web/resources/views/components/layouts/app.blade.php:
+  Penghubungan menu sidebar 'Termin tenaga ahli' ke route /termin-tenaga-ahli dengan preservasi parameter query ?periodeId=. Styling status aktif diterapkan bila URL cocok.
+- web/resources/views/termin-tenaga-ahli.blade.php:
+  Halaman Blade UI-K05-08 dengan layout Anaheim Nimbus, memuat:
+  (1) Badge 'Mode demo' transparan dan header actions (navigasi ke Periode payroll, Rekap biaya, dan tombol + Tambah termin).
+  (2) Alert banner dinamis: sukses aksi (termasuk banner sukses pembayaran dalam mode demo), galat ramah pengguna dengan tombol Coba lagi, dan info adapter demo.
+  (3) Selector periode payroll, filter status (Draf, Menunggu Verifikasi PM, Disetujui PM, Dibayar), dan pencarian instan (nama/ID/proyek).
+  (4) 4 Kartu KPI: Total Nominal Termin, Jumlah Termin, Termin Dibayar, Menunggu Verifikasi.
+  (5) Penanganan status UI lengkap: Memuat (skeleton/spinner loading), Data Kosong (empty state ramah dengan tombol buat termin / muat ulang), dan Tabel Data Berisi.
+  (6) Catatan bawah tabel diselaraskan transparan: "Data termin masih dalam mode demo dan belum terhubung ke Rekap Biaya."
+  (7) Pilihan status Dibayar pada filter dan form dibersihkan dari klaim masuk rekap biaya.
+  (8) Modal Detail Termin lengkap dengan informasi kontrak, milestone, verifikasi PM, dan bukti bayar, serta aksi Verifikasi PM dan Catat Pembayaran.
+  (9) Modal Form Tambah/Ubah Termin dengan validasi client-side inline (semua field wajib, format tanggal, nilai termin > 0).
+  (10) Panel Pengujian Demo (Accordion): Tombol uji instan skenario Normal, Kosong, Loading, Simulasi Galat 500 ramah pengguna, dan Reset Data Demo.
+- web/resources/js/termin-tenaga-ahli.js:
+  Modul JavaScript adapter demo mandiri (erpf5_demo_termin_data di localStorage):
+  * Banner sukses pembayaran diselaraskan: "Pembayaran termin {id} ({nominal}) berhasil dicatat sebagai Dibayar dalam mode demo."
+  * Menghapus seluruh klaim bahwa pembayaran termin otomatis masuk Rekap Biaya.
+  * Data bawaan sinkron dengan acuan examples/success.json (Termin TRM-2026-001 Rp25.000.000, Laras Anindita, status Dibayar).
+  * Operasi CRUD demo (tambah, edit, hapus, verifikasi PM, catat pembayaran).
+  * Sinkronisasi query param ?periodeId= menggunakan history.replaceState.
+  * Formatter nominal mata uang rupiah dan tanggal bahasa Indonesia.
+  * Penanganan galat HTTP 500 simulasi dengan pesan ramah pengguna dan tombol retry tanpa kebocoran exception teknis.
+- web/resources/js/app.js:
+  Pendaftaran modul import './termin-tenaga-ahli'.
+- web/tests/Feature/ExampleTest.php:
+  Penambahan 3 feature test baru:
+  * test_termin_tenaga_ahli_page_returns_successful_response (200 OK)
+  * test_termin_tenaga_ahli_page_with_periode_id_query_param (200 OK)
+  * test_sidebar_contains_termin_tenaga_ahli_link
+- Batasan pengerjaan ditaati:
+  * Tidak menyentuh controller API payroll, model Eloquent, migration, atau routes/api.php agar branch backend Arinal aman.
+Perintah yang benar-benar dijalankan:
+- cd web; npm run build -> Sukses dibangun dalam 914ms, app-D2M3uO5w.css (59.95 kB), app-49HTCL3j.js (72.17 kB). LULUS.
+- cd web; php artisan test --no-ansi -> 65 tes lulus (227 assertions, 0 gagal). LULUS.
+- python validate_contract.py -> Seluruh skema OpenAPI valid. LULUS.
+- python -m unittest discover tests -> 10 pengujian mock Python lulus. LULUS.
+Hasil aktual: Halaman Termin Tenaga Ahli (UI-K05-08 / FTR-K05-08) telah selesai diimplementasikan pada frontend Laravel dengan adapter demo terpisah yang transparan, pesan sukses pembayaran dan catatan bawah tabel telah diselaraskan tanpa klaim otomatis ke Rekap Biaya, seluruh penanganan kondisi UI berjalan sempurna, dan seluruh tes otomatis lulus 100%.
+Lokasi bukti: web/resources/views/termin-tenaga-ahli.blade.php, web/resources/js/termin-tenaga-ahli.js, web/tests/Feature/ExampleTest.php, dan terminal output build/test.
+Commit yang diuji: Belum dicommit. Siap ditinjau Zaki sebelum commit manual.
+Hambatan & Pertanyaan Terbuka:
+- Q-12: Dasar pengelompokan pembayaran termin ke periode payroll (tanggalJatuhTempo vs tanggalBayar aktual) belum diputuskan tim.
+- Q-14: Integrasi API F-2 untuk referensi proyek (projectId) dan penugasan Project Manager (PM) belum difinalisasi.
+- Pajak Tenaga Ahli: Pemotongan PPh 21 / PPh 23 tenaga ahli belum ada keputusan tertulis di F-5.
+Langkah berikutnya:
+1. Zaki: Buka browser ke http://127.0.0.1:8001/termin-tenaga-ahli, verifikasi daftar termin, coba klik catat pembayaran untuk memverifikasi banner sukses, periksa catatan bawah tabel, dan uji tombol simulasi di panel pengujian demo.
+2. Zaki: Ambil screenshot bukti UI-K05-08 untuk folder bukti/.
+3. Zaki: Periksa git status dan git diff, lalu lakukan commit terverifikasi pada branch kerja.
+4. Arinal: Saat jadwal pengembangan backend termin tiba (ENT-K05-13/15), buat controller dan API backend termin dengan menggantikan adapter demo localStorage.
+```
+
 ```text
 Tanggal dan jam: 10 November 2026, 23.39 WIB
 Anggota dan branch: Arinal Haq (Backend), branch feat/komponen-preview-backend
-ID pekerjaan: P-21 (Implementasi backend minimum Komponen Gaji dan Pratinjau Payroll)
+ID pekerjaan: P-25 (Implementasi backend minimum Komponen Gaji dan Pratinjau Payroll)
 Perubahan dan file terkait:
 - web/database/migrations/2026_11_10_165358_create_payroll_components_table.php:
   Membuat tabel payroll_components dengan FK payroll_period_id, employee_id, nominal payroll, komponen JSON, versi, unique periode/karyawan, dan cascade saat periode dihapus.

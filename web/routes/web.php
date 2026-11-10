@@ -51,6 +51,19 @@ Route::get('/pratinjau-perhitungan', function () {
     ]);
 });
 
+Route::get('/termin-tenaga-ahli', function () {
+    $periods = Schema::hasTable('payroll_periods')
+        ? PayrollPeriod::orderBy('tanggal_mulai', 'desc')->get()
+        : collect();
+
+    $selectedPeriodeId = request()->query('periodeId');
+
+    return view('termin-tenaga-ahli', [
+        'periods' => $periods,
+        'selectedPeriodeId' => $selectedPeriodeId,
+    ]);
+});
+
 Route::get('/rekap-biaya', function () {
     $periods = Schema::hasTable('payroll_periods')
         ? PayrollPeriod::orderBy('tanggal_mulai', 'desc')->get()

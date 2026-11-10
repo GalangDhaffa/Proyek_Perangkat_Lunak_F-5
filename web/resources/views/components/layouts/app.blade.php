@@ -65,7 +65,7 @@
                         <a href="{{ url('/pratinjau-perhitungan' . $navQuery) }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('pratinjau-perhitungan*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
                             Pratinjau perhitungan
                         </a>
-                        <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                        <a href="{{ url('/termin-tenaga-ahli' . $periodeOnlyQuery) }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('termin-tenaga-ahli*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
                             Termin tenaga ahli
                         </a>
                         <a href="{{ url('/rekap-biaya' . $periodeOnlyQuery) }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('rekap-biaya*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
