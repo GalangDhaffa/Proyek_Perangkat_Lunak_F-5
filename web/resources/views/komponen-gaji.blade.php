@@ -1,15 +1,15 @@
 <x-layouts.app>
     <x-slot:title>Komponen Gaji - Universal ERP</x-slot:title>
-    <x-slot:sessionUser>Petugas payroll &middot; Sesi demo</x-slot:sessionUser>
+    <x-slot:sessionUser>Petugas payroll &middot; autentikasi simulasi</x-slot:sessionUser>
     <x-slot:breadcrumb>Komponen gaji</x-slot:breadcrumb>
     <x-slot:pageTitle>Komponen gaji</x-slot:pageTitle>
     <x-slot:pageSubtitle>Atur gaji pokok, bonus, BPJS, serta rincian komponen pendapatan dan potongan karyawan.</x-slot:pageSubtitle>
 
     <x-slot:headerActions>
         <div class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                Mode demo
+            <span id="badge-api-mode" class="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                API Laravel · autentikasi simulasi
             </span>
             <a
                 id="btn-nav-ke-periode"
@@ -45,7 +45,16 @@
         data-initial-periods='@json($periods ?? [])'
         data-selected-periode-id="{{ $selectedPeriodeId ?? '' }}"
         data-selected-employee-id="{{ $selectedEmployeeId ?? '' }}"
+        data-api-token="mock-payroll"
     >
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 p-4 bg-white border border-slate-200 rounded-xl">
+            <label for="select-data-mode" class="text-xs font-semibold text-slate-700">Sumber data</label>
+            <select id="select-data-mode" class="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500">
+                <option value="api" selected>API Laravel (autentikasi mock)</option>
+                <option value="demo">Mode demo lokal</option>
+            </select>
+            <p class="text-xs text-slate-500">Token mock-payroll hanya simulasi, bukan autentikasi produksi. Data demo localStorage tidak dikirim ke API.</p>
+        </div>
 
         {{-- Banner Alert Sukses --}}
         <div
@@ -60,7 +69,7 @@
                 </svg>
             </div>
             <div class="flex-1">
-                <div class="font-semibold text-emerald-900">Perubahan berhasil disimpan (Sesi Demo)</div>
+                <div class="font-semibold text-emerald-900">Perubahan berhasil disimpan</div>
                 <div id="text-sukses" class="text-xs text-emerald-700 mt-0.5">Komponen gaji berhasil divalidasi dan diperbarui.</div>
             </div>
             <button type="button" id="btn-close-alert-sukses" class="text-emerald-500 hover:text-emerald-700 text-xs font-bold px-2 py-1">
@@ -490,4 +499,3 @@
 
     </div>
 </x-layouts.app>
-

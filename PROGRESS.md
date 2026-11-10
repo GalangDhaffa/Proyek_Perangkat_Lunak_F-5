@@ -529,6 +529,31 @@ Langkah berikutnya:
 2. Zaki: Ambil screenshot bukti UI-K05-08 untuk folder bukti/.
 3. Zaki: Periksa git status dan git diff, lalu lakukan commit terverifikasi pada branch kerja.
 4. Arinal: Saat jadwal pengembangan backend termin tiba (ENT-K05-13/15), buat controller dan API backend termin dengan menggantikan adapter demo localStorage.
+
+## Pembaruan P-25: Integrasi frontend Komponen Gaji dan Pratinjau
+
+Tanggal: 11 November 2026
+
+Perubahan lanjutan:
+- `web/resources/views/komponen-gaji.blade.php` dan `web/resources/views/pratinjau-perhitungan.blade.php` menyediakan pemilih mode API/demo. Mode awal adalah API. Label menyatakan autentikasi `mock-payroll` masih simulasi.
+- `web/resources/js/komponen-gaji.js` membaca data dengan GET dan menyimpan dengan PUT sesuai kontrak controller, termasuk `versiKomponen` dan `nominal`. Data demo/localStorage hanya dibaca atau disimpan setelah mode demo dipilih. Respons komponen belum tersedia menghasilkan form kosong, bukan fixture demo.
+- `web/resources/js/pratinjau-perhitungan.js` mengirim POST dengan `employeeId` saja dan menampilkan nilai total dari respons backend. Tidak ada fallback hasil demo pada kegagalan API. Kegagalan akses, validasi, jaringan, dan F-4 ditampilkan sebagai error, sedangkan komponen yang belum ada ditampilkan sebagai keadaan belum dikonfigurasi.
+- Panel skenario demo dan tombol isi template disembunyikan saat mode API aktif.
+- `web/tests/Feature/PayrollComponentApiTest.php` menambahkan round-trip PUT, GET, dan POST untuk data contoh dengan gaji bersih Rp6.640.000. `web/tests/Feature/ExampleTest.php` memastikan kedua halaman menampilkan pemilih mode dan label token mock.
+- Tidak ada perubahan implementasi backend. Route API dan kontrak yang tersedia sudah sesuai.
+
+Pemeriksaan aktual:
+- `cd web; php artisan test tests/Feature/PayrollComponentApiTest.php tests/Feature/ExampleTest.php` -> 20 tes lulus, 95 assertions.
+- `cd web; npm run build` -> build Vite berhasil. Ada peringatan opsional bahwa paket `fontaine` tidak terpasang, tetapi build sukses.
+- `git diff --check` -> lulus.
+- Eksekusi awal tes halaman bersamaan dengan build sempat gagal karena manifest Vite sementara belum tersedia. Setelah build selesai, tes dijalankan ulang berurutan dan seluruh tes terkait lulus.
+
+Batas integrasi:
+- Pengujian round-trip memakai Laravel Feature Test dan `Http::fake()` untuk respons F-4. Ini memverifikasi endpoint simpan, baca ulang, dan pratinjau beserta hasil Rp6.640.000, tetapi bukan pengujian langsung terhadap layanan F-4.
+- Pengujian browser interaktif end-to-end belum dijalankan. Build dan render halaman melalui Feature Test lulus.
+- Autentikasi `mock-payroll` tetap simulasi dan belum menggantikan autentikasi produksi.
+- Kontrak OpenAPI belum diubah karena keputusan perubahan kontrak resmi belum dicatat.
+- Perubahan belum dicommit. Branch yang aktif saat pemeriksaan adalah `main`.
 ```
 
 ```text

@@ -2,11 +2,7 @@
  * Pratinjau Perhitungan Frontend Module - ERP PT Anaheim Nimbus Universal (Kelompok 5 F-5)
  * Mendukung FTR-K05-04 dan UI-K05-04.
  *
- * Catatan Arsitektur:
- * - Menghubungi API backend payroll jika endpoint telah tersedia.
- * - Jika API backend belum tersedia (HTTP 404/503), modul ini menggunakan dataset demo
- *   terstandar dengan penanda demo yang jelas dan transparan.
- * - Mendukung pelacakan status hasil lama (stale) saat pilihan input periode/karyawan diubah.
+ * API Laravel adalah mode awal. Kalkulasi demo hanya berjalan jika dipilih pengguna.
  */
 
 export function formatRupiah(amount) {
@@ -96,6 +92,8 @@ export function initPratinjauPerhitungan() {
     if (!root) return;
 
     // ── Elemen DOM Utama ────────────────────────────────────────────────────
+    const selectDataMode          = document.getElementById('select-data-mode');
+    const badgeApiMode            = document.getElementById('badge-api-mode');
     const selectPeriode           = document.getElementById('select-periode');
     const selectKaryawan          = document.getElementById('select-karyawan');
     const textPeriodeRentang      = document.getElementById('text-periode-rentang');
@@ -176,6 +174,63 @@ export function initPratinjauPerhitungan() {
     let lastCalculatedPeriodeId = null;
     let lastCalculatedEmployeeId = null;
     let isStale = false;
+    const initialMode = new URLSearchParams(window.location.search).get('mode') === 'demo' ? 'demo' : 'api';
+    selectDataMode.value = initialMode;
+
+    function isApiMode() {
+        return selectDataMode.value === 'api';
+    }
+
+    function setModeBadge() {
+        badgeApiMode.textContent = isApiMode() ? 'API Laravel · autentikasi simulasi' : 'Mode demo lokal';
+        badgeApiMode.className = isApiMode()
+            ? 'inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full'
+            : 'inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full';
+        if (btnTogglePanelUji) btnTogglePanelUji.classList.toggle('hidden', isApiMode());
+        if (panelPengujian && isApiMode()) panelPengujian.classList.add('hidden');
+    }
+
+    async function requestPayrollApi(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${root.dataset.apiToken}`,
+                ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+                ...options.headers,
+            },
+        });
+        let body = {};
+        try {
+            body = await response.json();
+        } catch {
+            if (response.ok) throw new Error('Respons API payroll bukan JSON yang valid.');
+        }
+        if (!response.ok) {
+            const error = new Error(body.message || `Request API gagal (HTTP ${response.status}).`);
+            error.status = response.status;
+            error.code = body.code || `HTTP_${response.status}`;
+            error.details = Array.isArray(body.details) ? body.details : [];
+            throw error;
+        }
+        return body;
+    }
+
+    function showApiError(error) {
+        hideAllAlerts();
+        hide(stateLoading);
+        hide(stateContent);
+        hide(stateUnconfigured);
+        const errorBadge = document.getElementById('error-code-badge');
+        const titleError = document.getElementById('title-error');
+        if (errorBadge) errorBadge.textContent = error.code || `HTTP_${error.status || 'NETWORK'}_ERROR`;
+        if (titleError) titleError.textContent = 'Gagal Memproses Pratinjau Perhitungan';
+        const detailMessages = (error.details || []).map(detail => detail.message).filter(Boolean);
+        textError.textContent = [error.message || 'Tidak dapat menghubungi API payroll.', ...detailMessages].join(' ');
+        show(alertError);
+        badgeStatusKalkulasi.textContent = 'Gagal';
+        badgeStatusKalkulasi.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-300';
+    }
 
     // Baca data awal dari atribut root
     let initialPeriods = [];
@@ -232,6 +287,10 @@ export function initPratinjauPerhitungan() {
         return `${DEMO_STALE_PREFIX}${periodeId || 'default'}_${employeeId || 'EMP-001'}`;
     }
 
+    function getApiStaleKey(periodeId, employeeId) {
+        return `erpf5_api_stale_${periodeId || 'default'}_${employeeId || 'EMP-001'}`;
+    }
+
     /**
      * Mengambil data komponen gaji karyawan.
      * Mengutamakan data yang disimpan di penyimpanan demo bersama (localStorage).
@@ -267,6 +326,8 @@ export function initPratinjauPerhitungan() {
         const params = new URLSearchParams();
         if (currentPid) params.set('periodeId', currentPid);
         if (currentEmpId) params.set('employeeId', currentEmpId);
+        params.set('mode', isApiMode() ? 'api' : 'demo');
+        params.set('mode', isApiMode() ? 'api' : 'demo');
 
         const paramString = params.toString() ? '?' + params.toString() : '';
 
@@ -308,10 +369,14 @@ export function initPratinjauPerhitungan() {
 
         const currentPid = selectPeriode.value;
         const currentEmpId = selectKaryawan.value;
-        const { data: empData } = getEmployeeComponentData(currentPid, currentEmpId);
-
-        textKaryawanDept.textContent = empData.departemen || 'Belum tersedia';
-        textKaryawanJabatan.textContent = empData.jabatan || 'Belum tersedia';
+        if (isApiMode()) {
+            textKaryawanDept.textContent = 'Belum tersedia';
+            textKaryawanJabatan.textContent = 'Belum tersedia';
+        } else {
+            const { data: empData } = getEmployeeComponentData(currentPid, currentEmpId);
+            textKaryawanDept.textContent = empData.departemen || 'Belum tersedia';
+            textKaryawanJabatan.textContent = empData.jabatan || 'Belum tersedia';
+        }
 
         updateNavigationLinks();
         checkStaleCondition();
@@ -320,7 +385,8 @@ export function initPratinjauPerhitungan() {
     // ── Periksa Apakah Hasil Menjadi Stale (Perlu Hitung Ulang) ──────────────
     function isDataMarkedStale(pid, empId) {
         try {
-            if (localStorage.getItem(getSharedStaleKey(pid, empId)) === 'true') {
+            const staleKey = isApiMode() ? getApiStaleKey(pid, empId) : getSharedStaleKey(pid, empId);
+            if (localStorage.getItem(staleKey) === 'true') {
                 return true;
             }
         } catch (e) {}
@@ -367,7 +433,7 @@ export function initPratinjauPerhitungan() {
     }
 
     // ── Render Rincian Kalkulasi ────────────────────────────────────────────
-    function renderCalculationData(emp, calculationSource = 'Mode Demo (Penyimpanan Bersama)') {
+    function renderCalculationData(emp, calculationSource = 'Mode Demo (Penyimpanan Bersama)', serverResult = null) {
         // Tampilkan info karyawan
         viewKaryawanNama.textContent = emp.nama;
         viewKaryawanId.textContent = emp.id;
@@ -387,7 +453,17 @@ export function initPratinjauPerhitungan() {
         tbodyKomponenPendapatan.innerHTML = '';
         tbodyKomponenPotongan.innerHTML = '';
 
-        (emp.komponen || []).forEach(k => {
+        const components = serverResult
+            ? [
+                ...(serverResult.komponenPendapatan > 0
+                    ? [{ nama: 'Total komponen pendapatan aktif', jenis: 'pendapatan', nominal: serverResult.komponenPendapatan, aktif: true }]
+                    : []),
+                ...(serverResult.komponenPotongan > 0
+                    ? [{ nama: 'Total komponen potongan aktif', jenis: 'potongan', nominal: serverResult.komponenPotongan, aktif: true }]
+                    : []),
+            ]
+            : (emp.komponen || []);
+        components.forEach(k => {
             if (k.aktif !== false) {
                 const tr = document.createElement('tr');
                 if (k.jenis === 'pendapatan') {
@@ -419,9 +495,12 @@ export function initPratinjauPerhitungan() {
         // Total Pengurang Gaji = Total Komponen Potongan Aktif + BPJS Karyawan
         // Estimasi Gaji Bersih = Total Pendapatan - Total Pengurang Gaji
         // BPJS Perusahaan: ditanggung perusahaan, TIDAK mengurangi gaji bersih karyawan
-        const totalPendapatan = gajiPokok + bonus + totalKomponenPendapatan;
-        const totalPotonganKaryawan = totalKomponenPotongan + bpjsKaryawan;
-        const gajiBersih = totalPendapatan - totalPotonganKaryawan;
+        const totalPendapatan = serverResult ? Number(serverResult.totalPendapatan) : gajiPokok + bonus + totalKomponenPendapatan;
+        const totalPotonganKaryawan = serverResult
+            ? Number(serverResult.totalPotongan) + bpjsKaryawan
+            : totalKomponenPotongan + bpjsKaryawan;
+        const totalPotonganKomponen = serverResult ? Number(serverResult.totalPotongan) : totalKomponenPotongan;
+        const gajiBersih = serverResult ? Number(serverResult.totalGajiBersih) : totalPendapatan - totalPotonganKaryawan;
 
         // Set Nilai Baris Detail
         rowGajiPokok.textContent = formatRupiah(gajiPokok);
@@ -436,7 +515,7 @@ export function initPratinjauPerhitungan() {
 
         // Set Stat Cards
         statTotalPendapatan.textContent = formatRupiah(totalPendapatan);
-        statTotalPotongan.textContent = formatRupiah(totalKomponenPotongan);
+        statTotalPotongan.textContent = formatRupiah(totalPotonganKomponen);
         statBpjsKaryawan.textContent = formatRupiah(bpjsKaryawan);
         statGajiBersih.textContent = formatRupiah(gajiBersih);
     }
@@ -486,6 +565,11 @@ export function initPratinjauPerhitungan() {
         const currentEmpId = selectKaryawan.value;
 
         hideAllAlerts();
+
+        if (isApiMode()) {
+            await executeApiPreview(currentPid, currentEmpId);
+            return;
+        }
 
         // Ambil data komponen karyawan dari penyimpanan demo bersama (atau template bawaan jika belum ada)
         const { data: empData, isStored } = getEmployeeComponentData(currentPid, currentEmpId);
@@ -550,6 +634,95 @@ export function initPratinjauPerhitungan() {
         }, 250);
     }
 
+    async function executeApiPreview(periodeId, employeeId) {
+        hide(stateUnconfigured);
+        hide(stateContent);
+        show(stateLoading);
+        btnHitungPratinjau.disabled = true;
+        show(iconHitungSpinner);
+        hide(iconHitungCalc);
+        textTombolHitung.textContent = 'Memproses…';
+
+        try {
+            if (!periodeId || !employeeId) {
+                throw Object.assign(new Error('Pilih periode dan karyawan terlebih dahulu.'), { code: 'INVALID_SELECTION' });
+            }
+            const result = await requestPayrollApi(
+                `/api/payroll/v1/periode/${encodeURIComponent(periodeId)}/pratinjau`,
+                { method: 'POST', body: JSON.stringify({ employeeId }) }
+            );
+            const amountFields = [
+                'gajiPokok',
+                'bonus',
+                'bpjsKaryawan',
+                'bpjsPerusahaan',
+                'komponenPendapatan',
+                'komponenPotongan',
+                'totalPendapatan',
+                'totalPotongan',
+                'totalGajiBersih',
+            ];
+            if (
+                result.employeeId !== employeeId ||
+                amountFields.some(field => !Number.isFinite(result[field])) ||
+                !result.cuti ||
+                !Array.isArray(result.cuti.items) ||
+                !Number.isFinite(result.cuti.totalCuti) ||
+                !Number.isFinite(result.cuti.totalHariCuti)
+            ) {
+                throw Object.assign(new Error('Format respons pratinjau payroll tidak valid.'), { code: 'INVALID_API_RESPONSE' });
+            }
+
+            const selectedEmployee = selectKaryawan.options[selectKaryawan.selectedIndex];
+            const employeeData = {
+                id: result.employeeId,
+                nama: selectedEmployee ? selectedEmployee.textContent.trim() : result.employeeId,
+                jabatan: 'Belum tersedia',
+                departemen: 'Belum tersedia',
+                gajiPokok: Number(result.gajiPokok),
+                bonus: Number(result.bonus),
+                bpjsKaryawan: Number(result.bpjsKaryawan),
+                bpjsPerusahaan: Number(result.bpjsPerusahaan),
+                komponen: [],
+            };
+            hide(stateLoading);
+            show(stateContent);
+            renderCalculationData(employeeData, 'Backend Laravel (autentikasi simulasi)', result);
+
+            try {
+                localStorage.removeItem(getApiStaleKey(periodeId, employeeId));
+            } catch (storageError) {
+                console.warn('[pratinjau-perhitungan] Gagal membersihkan penanda stale API:', storageError);
+            }
+            hasCalculated = true;
+            isStale = false;
+            lastCalculatedPeriodeId = periodeId;
+            lastCalculatedEmployeeId = employeeId;
+            stateContent.classList.remove('opacity-75');
+            viewBadgeStatusHasil.textContent = 'Hasil Mutakhir';
+            viewBadgeStatusHasil.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+            badgeStatusKalkulasi.textContent = 'Hasil mutakhir';
+            badgeStatusKalkulasi.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300';
+            textSukses.textContent = `Pratinjau untuk ${employeeId} berhasil dihitung oleh backend payroll. Data cuti F-4 tersedia untuk ${result.cuti.totalCuti} pengajuan (${result.cuti.totalHariCuti} hari kerja).`;
+            show(alertSukses);
+        } catch (error) {
+            hide(stateLoading);
+            if (error.code === 'PAYROLL_COMPONENT_NOT_FOUND') {
+                hide(stateContent);
+                show(stateUnconfigured);
+                badgeStatusKalkulasi.textContent = 'Belum dikonfigurasi';
+                badgeStatusKalkulasi.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200';
+            } else {
+                showApiError(error);
+            }
+        } finally {
+            btnHitungPratinjau.disabled = false;
+            hide(iconHitungSpinner);
+            show(iconHitungCalc);
+            textTombolHitung.textContent = 'Hitung Pratinjau';
+        }
+    }
+
     // ── Event Listeners ─────────────────────────────────────────────────────
     if (selectPeriode) {
         selectPeriode.addEventListener('change', () => {
@@ -562,6 +735,13 @@ export function initPratinjauPerhitungan() {
             updateSelectedMeta();
         });
     }
+
+    selectDataMode.addEventListener('change', () => {
+        setModeBadge();
+        updateSelectedMeta();
+        hideAllAlerts();
+        executeHitungPratinjau();
+    });
 
     if (btnHitungPratinjau) {
         btnHitungPratinjau.addEventListener('click', executeHitungPratinjau);
@@ -633,13 +813,16 @@ export function initPratinjauPerhitungan() {
     }
 
     // ── Inisialisasi Pertama Kali ───────────────────────────────────────────
+    setModeBadge();
     updateSelectedMeta();
 
     const currentInitialPid = selectPeriode.value;
     const currentInitialEmpId = selectKaryawan.value;
 
-    // Jika data ditandai stale di shared storage, render pratinjau dengan tanda stale (jangan auto-reset)
-    if (isDataMarkedStale(currentInitialPid, currentInitialEmpId)) {
+    if (isApiMode()) {
+        executeHitungPratinjau();
+    // Jika data demo ditandai stale, render pratinjau lama dengan tanda stale.
+    } else if (isDataMarkedStale(currentInitialPid, currentInitialEmpId)) {
         const { data: initialEmp, isStored } = getEmployeeComponentData(currentInitialPid, currentInitialEmpId);
         show(stateContent);
         renderCalculationData(initialEmp, isStored ? 'Penyimpanan Demo Bersama (Tersimpan)' : 'Mode Demo Frontend (Acuan F-5)');
@@ -657,4 +840,3 @@ if (document.readyState === 'loading') {
 } else {
     initPratinjauPerhitungan();
 }
-

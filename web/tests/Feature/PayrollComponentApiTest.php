@@ -165,6 +165,66 @@ class PayrollComponentApiTest extends TestCase
         );
     }
 
+    public function test_api_round_trip_returns_the_expected_net_pay(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            '*/api/v1/leave-status*' => Http::response([
+                'employeeId' => 'EMP-001',
+                'items' => [],
+            ], 200),
+        ]);
+
+        $payload = [
+            'employeeId' => 'EMP-001',
+            'gajiPokok' => 6_000_000,
+            'bonus' => 500_000,
+            'bpjsKaryawan' => 60_000,
+            'bpjsPerusahaan' => 240_000,
+            'versiKomponen' => 1,
+            'komponen' => [
+                [
+                    'nama' => 'Tunjangan',
+                    'jenis' => 'pendapatan',
+                    'nominal' => 300_000,
+                    'aktif' => true,
+                ],
+                [
+                    'nama' => 'Potongan',
+                    'jenis' => 'potongan',
+                    'nominal' => 100_000,
+                    'aktif' => true,
+                ],
+            ],
+        ];
+
+        $this->withToken('mock-payroll')
+            ->putJson('/api/payroll/v1/periode/'.self::PERIODO_ID.'/komponen', $payload)
+            ->assertOk()
+            ->assertJsonPath('komponen.0.nominal', 300_000)
+            ->assertJsonPath('versiKomponen', 1);
+
+        $this->withToken('mock-payroll')
+            ->getJson('/api/payroll/v1/periode/'.self::PERIODO_ID.'/komponen?employeeId=EMP-001')
+            ->assertOk()
+            ->assertJsonPath('gajiPokok', 6_000_000)
+            ->assertJsonPath('bonus', 500_000)
+            ->assertJsonPath('bpjsKaryawan', 60_000)
+            ->assertJsonPath('bpjsPerusahaan', 240_000)
+            ->assertJsonPath('komponen.0.nominal', 300_000)
+            ->assertJsonPath('komponen.1.nominal', 100_000);
+
+        $this->withToken('mock-payroll')
+            ->postJson('/api/payroll/v1/periode/'.self::PERIODO_ID.'/pratinjau', [
+                'employeeId' => 'EMP-001',
+            ])
+            ->assertOk()
+            ->assertJsonPath('totalPendapatan', 6_800_000)
+            ->assertJsonPath('totalPotongan', 100_000)
+            ->assertJsonPath('totalGajiBersih', 6_640_000)
+            ->assertJsonPath('bpjsPerusahaan', 240_000);
+    }
+
     public function test_preview_returns_upstream_failure_instead_of_a_success_payload(): void
     {
         Http::preventStrayRequests();
