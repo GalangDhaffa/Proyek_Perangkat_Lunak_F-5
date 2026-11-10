@@ -350,3 +350,119 @@ Langkah berikutnya:
 2. Zaki: Coba ganti ID ke EMP-999 (verifikasi error karyawan tidak ditemukan) dan coba matikan F-4 sementara untuk verifikasi pesan 503 layanan tidak terjangkau.
 3. Zaki: Periksa git status dan git diff, lalu lakukan commit manual.
 ```
+
+```text
+Tanggal dan jam: 10 November 2026, 19.18 WIB
+Anggota dan branch: Muhamad Rizky (Frontend), branch main
+ID pekerjaan: P-21 (Halaman Komponen Gaji: FTR-K05-02, UI-K05-02)
+Perubahan dan file terkait:
+- web/routes/web.php:
+  Pendaftaran route GET /komponen-gaji dengan pemuatan daftar periode dari database SQLite serta parsing query parameter ?periodeId=.
+- web/resources/views/components/layouts/app.blade.php:
+  Penambahan item navigasi 'Komponen gaji' di sidebar navigasi utama Anaheim Nimbus.
+- web/resources/views/periode-payroll.blade.php:
+  Penambahan tombol navigasi 'Komponen gaji' di headerActions yang membawa ID periode terpilih.
+- web/resources/js/periode-payroll.js:
+  Sinkronisasi href tombol 'btn-nav-komponen-gaji' secara dinamis dengan periode terpilih (/komponen-gaji?periodeId=...) saat dropdown periode berganti.
+- web/resources/views/komponen-gaji.blade.php:
+  Halaman Blade UI-K05-02 (acuan Figma 5-46) memuat:
+  (1) Pemilih periode (dari DB) dan pemilih karyawan demo (EMP-001 s.d EMP-999).
+  (2) Formulir gaji pokok, bonus periode, BPJS karyawan, dan BPJS perusahaan.
+  (3) Kartu ringkasan kalkulasi real-time (total pendapatan, potongan komponen, BPJS karyawan, dan estimasi gaji bersih).
+  (4) Tabel rincian komponen tambahan dinamis dengan kolom nama komponen, jenis (pendapatan/potongan), nominal rupiah, toggle aktif/nonaktif, dan tombol hapus baris.
+  (5) Tombol tambah baris, reset formulir, dan tombol simpan komponen dengan validasi client-side.
+  (6) Penanganan seluruh kondisi UI: memuat (skeleton loader), kosong (banner dan tabel kosong saat belum ada komponen), berhasil (alert sukses sesi demo), dan gagal (alert error validasi dan simulasi 503).
+  (7) Panel accordion pengujian demo untuk kemudahan pengujian semua kondisi UI.
+- web/resources/js/komponen-gaji.js:
+  Logika interaktif frontend mencakup state management in-memory per kombinasi periode dan karyawan, kalkulasi real-time, manipulasi baris dinamis, validasi per-field, penanganan kondisi loading, kosong, berhasil, dan gagal.
+- web/resources/js/app.js:
+  Pendaftaran impor modul './komponen-gaji'.
+- web/tests/Feature/ExampleTest.php:
+  Penambahan 2 feature test: akses halaman /komponen-gaji (200) dan akses dengan parameter query periodeId (200).
+Perintah yang benar-benar dijalankan:
+- cd web; npm run build -> built in 853ms, app-C0J_jI_3.css 54.32 kB, app-DkOqI8sW.js 39.06 kB. LULUS.
+- php web/artisan route:list -> Rute /komponen-gaji terdaftar. LULUS.
+- php web/artisan view:cache & view:clear -> Kompilasi template Blade lulus tanpa error sintaks.
+- php test_route.php -> HTTP 200 OK untuk /komponen-gaji, pemuatan elemen select-karyawan & select-periode, dan tombol navigasi lintas halaman terbukti ada.
+Hasil aktual: Halaman Komponen Gaji (UI-K05-02 / FTR-K05-02) berhasil dibangun sesuai desain dan seluruh kebutuhan, aset terkompilasi, navigasi dari Periode Payroll terintegrasi, dan tidak ada perubahan sepihak pada backend.
+Lokasi bukti: web/resources/views/komponen-gaji.blade.php, web/resources/js/komponen-gaji.js, dan terminal output build.
+Commit yang diuji: Belum dicommit. Siap ditinjau Zaki sebelum commit manual.
+Hambatan: Endpoint API backend untuk komponen gaji belum dirilis oleh Arinal. Modul frontend berjalan menggunakan dataset demo terpisah dengan penanda transparansi yang jelas.
+Langkah berikutnya:
+1. Zaki: Buka browser ke http://127.0.0.1:8001/periode-payroll, klik tombol 'Komponen gaji' untuk memastikan periode terpilih terbawa ke /komponen-gaji?periodeId=..., uji penambahan/penghapusan baris komponen, dan ambil screenshot bukti UI-K05-02.
+2. Zaki: Periksa git diff (git diff web/) dan lakukan commit terverifikasi.
+3. Arinal: Rancang dan implementasikan kontrak API backend untuk komponen gaji (FTR-K05-02) sesuai kesepakatan tim.
+```
+
+```text
+Tanggal dan jam: 10 November 2026, 19.26 WIB
+Anggota dan branch: Muhamad Rizky (Frontend), branch main
+ID pekerjaan: P-22 (Halaman Pratinjau Perhitungan: FTR-K05-04, UI-K05-04)
+Perubahan dan file terkait:
+- web/routes/web.php:
+  Pendaftaran route GET /pratinjau-perhitungan dengan parsing query parameter ?periodeId= dan ?employeeId=.
+- web/resources/views/components/layouts/app.blade.php:
+  Penambahan item navigasi 'Pratinjau perhitungan' pada sidebar utama Anaheim Nimbus.
+- web/resources/views/komponen-gaji.blade.php & web/resources/js/komponen-gaji.js:
+  Penambahan tombol navigasi 'Pratinjau perhitungan' di headerActions yang meneruskan ?periodeId= dan ?employeeId= secara dinamis.
+- web/resources/views/pratinjau-perhitungan.blade.php:
+  Halaman Blade UI-K05-04 memakai layout bersama, memuat:
+  (1) Pemilih periode dan karyawan dengan badge status serta metadata rentang tanggal.
+  (2) Tombol 'Hitung Pratinjau' dengan spinner pemrosesan.
+  (3) Rincian pendapatan (gaji pokok, bonus periode, tunjangan aktif).
+  (4) Rincian potongan & BPJS (potongan komponen, BPJS karyawan terpisah, BPJS perusahaan ditanggung pemberi kerja).
+  (5) 4 kartu ringkasan: Total Pendapatan, Potongan Komponen, BPJS Karyawan, dan Estimasi Gaji Bersih.
+  (6) Waktu hitung terperinci dan sumber data kalkulasi.
+  (7) Panel catatan kebijakan F-5 dan asumsi demo (bonus termasuk pendapatan, BPJS terpisah, PPh 21 menunggu Q-11).
+  (8) Penanganan seluruh kondisi UI: memuat (loading spinner), belum ada konfigurasi (state-unconfigured untuk EMP-999), gagal dengan tombol coba lagi (retry), dan penanda hasil lama (stale) saat input diubah.
+  (9) Panel accordion pengujian demo untuk kemudahan pengujian kondisi UI.
+- web/resources/js/pratinjau-perhitungan.js:
+  Logika pemanggilan fetch() ke endpoint API backend Arinal (/api/payroll/v1/pratinjau-perhitungan), fallback transparan ke kalkulasi demo terstandar jika API belum dirilis, pelacakan perubahan input periode/karyawan untuk menandai hasil lama (stale), dan format nominal mata uang rupiah.
+- web/resources/js/app.js:
+  Pendaftaran impor modul './pratinjau-perhitungan'.
+- web/tests/Feature/ExampleTest.php:
+  Penambahan 2 feature test: akses halaman /pratinjau-perhitungan (200) dan akses dengan query parameter lengkap (200).
+Perintah yang benar-benar dijalankan:
+- cd web; npm run build -> built in 921ms, app-C6vrnSXN.css 55.98 kB, app-D3kwfh6J.js 50.21 kB. LULUS.
+- php web/artisan route:list -> Rute /pratinjau-perhitungan terdaftar. LULUS.
+- php web/artisan view:cache & view:clear -> Kompilasi template Blade lulus tanpa error sintaks.
+- php test_route.php -> HTTP 200 OK untuk /pratinjau-perhitungan, pemuatan elemen select-karyawan & select-periode, dan tombol navigasi lintas halaman terbukti ada.
+Hasil aktual: Halaman Pratinjau Perhitungan (UI-K05-04 / FTR-K05-04) berhasil dibangun sesuai desain dan seluruh kebutuhan, pemanggilan API terstruktur, penanganan hasil lama (stale) bekerja dinamis, aset terkompilasi, dan tidak ada penambahan persetujuan payroll atau PDF slip.
+Lokasi bukti: web/resources/views/pratinjau-perhitungan.blade.php, web/resources/js/pratinjau-perhitungan.js, dan terminal output build.
+Commit yang diuji: Belum dicommit. Siap ditinjau Zaki sebelum commit manual.
+Hambatan: Endpoint API backend untuk kalkulasi payroll belum dirilis oleh Arinal. Modul frontend memanggil API secara transparan dan menggunakan fallback kalkulasi demo dengan penandaan yang jelas.
+Langkah berikutnya:
+1. Zaki: Buka browser ke http://127.0.0.1:8001/pratinjau-perhitungan, uji klik 'Hitung Pratinjau', coba ubah periode/karyawan untuk memverifikasi penanda hasil lama (stale), coba EMP-999 untuk memverifikasi kondisi belum ada konfigurasi, dan ambil screenshot bukti UI-K05-04.
+2. Zaki: Periksa git diff (git diff web/) dan lakukan commit terverifikasi.
+3. Arinal: Rancang dan implementasikan endpoint backend GET/POST /api/payroll/v1/pratinjau-perhitungan sesuai kesepakatan kalkulasi payroll FTR-K05-04.
+```
+
+```text
+Tanggal dan jam: 10 November 2026, 20.07 WIB
+Anggota dan branch: Muhamad Rizky (Frontend), branch main
+ID pekerjaan: P-23 (Pemeriksaan Frontend F-5, Investigasi API Periode, Konsistensi periodeId & Penyelarasan Mode Demo)
+Perubahan dan file terkait:
+- Investigasi Root Cause "Gagal memuat daftar periode dari server":
+  Ditemukan pesan error "SQLSTATE[HY000]: General error: 1 no such table: payroll_periods" pada request GET /api/payroll/v1/periode (HTTP 500).
+  Penyebab: Migrasi tabel SQLite belum dijalankan pada instance ini.
+  Tindakan perbaikan:
+  * web/database/seeders/DatabaseSeeder.php: Ditambahkan pemanggilan $this->call(PayrollPeriodSeeder::class) agar migrate --seed otomatis mengisi data periode awal.
+  * Menjalankan: php artisan migrate --seed --force dan php artisan db:seed --class=PayrollPeriodSeeder.
+  * Hasil: 5 data periode tersedia di database. Request GET /api/payroll/v1/periode sekarang mengembalikan status HTTP 200 OK dengan 5 data periode.
+  * web/resources/js/periode-payroll.js: Pesan error fetch diperjelas dengan menampilkan status HTTP dan pesan respons dari backend.
+- web/resources/views/rekap-biaya.blade.php & web/routes/web.php:
+  Dropdown periode pada halaman Rekap Biaya kini memuat data dinamis dari database ($periods) dan membaca ?periodeId=, dengan fallback UUID fixture demo.
+- web/resources/views/komponen-gaji.blade.php & web/resources/views/pratinjau-perhitungan.blade.php:
+  * Menghapus seluruh nama fiktif ("Budi Santoso", dsb.). Dropdown dan tampilan UI menggunakan ID resmi EMP-001 dengan keterangan sumber: "Karyawan 1 (Referensi F-2 / Seed Cuti F-4)".
+  * Mengganti seluruh penyebutan "backend Arinal" menjadi penanda resmi "Mode demo".
+- web/resources/js/komponen-gaji.js & web/resources/js/pratinjau-perhitungan.js:
+  * Menyelaraskan teks fallback, alert, simulasi galat 503, dan komentar kode agar menggunakan label "Mode demo" tanpa menyebut nama perseorangan.
+  * Menghapus pemetaan nama karangan pada dataset demo.
+Perintah yang benar-benar dijalankan:
+- php web/artisan db:seed --class=PayrollPeriodSeeder -> Sukses memasukkan 5 periode.
+- cd web; php artisan test tests/Feature/PayrollPeriodApiTest.php tests/Feature/RekapBiayaApiTest.php -> 39 passed (143 assertions). LULUS.
+- cd web; npm run build -> Sukses, app-DmT9QJf3.js (50.37 kB), app-C6vrnSXN.css (55.98 kB). LULUS.
+- curl.exe -s -i http://127.0.0.1:8001/rekap-biaya -> HTTP/1.1 200 OK, dropdown memuat UUID periode dari database. LULUS.
+Hasil aktual: Seluruh 5 poin pemeriksaan berhasil diselesaikan: error API periode terpecahkan, periodeId dan status sinkron di 4 halaman, referensi EMP-001 terverifikasi sumbernya tanpa nama karangan, penandaan "Mode demo" konsisten, dan seluruh fitur berjalan stabil.
+Commit yang diuji: Siap untuk commit dan push ke GitHub oleh Zaki/tim.
+```

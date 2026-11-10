@@ -10,6 +10,7 @@ export function initPeriodePayroll() {
 
     // ── Elemen DOM ──────────────────────────────────────────────────────────
     const btnTambah        = document.getElementById('btn-tambah-periode');
+    const btnNavKomponenGaji = document.getElementById('btn-nav-komponen-gaji');
     const selectPeriode    = document.getElementById('select-periode');
     const wrapperPicker    = document.getElementById('wrapper-picker-periode');
     const formPeriode      = document.getElementById('form-periode');
@@ -251,12 +252,18 @@ export function initPeriodePayroll() {
             pageTitle.textContent = 'Periode payroll';
             pageSubtitle.textContent = 'Kelola periode dan siapkan data sebelum menghitung gaji.';
             setDisplay(btnTambah, 'inline-flex');
+            setDisplay(btnNavKomponenGaji, 'inline-flex');
             setDisplay(wrapperPicker, 'block');
 
             if (current) {
                 panelTitle.textContent = current.namaPeriode;
                 panelBadgeStatus.textContent = current.status;
                 panelKeterangan.textContent = `Periode tersimpan dengan status ${current.status}.`;
+
+                if (btnNavKomponenGaji) {
+                    const pid = current.uuid || current.id;
+                    btnNavKomponenGaji.href = pid ? `/komponen-gaji?periodeId=${encodeURIComponent(pid)}` : '/komponen-gaji';
+                }
 
                 btnUbah.disabled = false;
                 btnUbah.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -295,6 +302,7 @@ export function initPeriodePayroll() {
             pageTitle.textContent = 'Tambah periode';
             pageSubtitle.textContent = 'Isi tanggal dan simpan perubahan periode payroll.';
             setDisplay(btnTambah, 'none');
+            setDisplay(btnNavKomponenGaji, 'none');
             setDisplay(wrapperPicker, 'none');
 
             panelTitle.textContent = 'Data periode';
@@ -326,6 +334,7 @@ export function initPeriodePayroll() {
             pageTitle.textContent = 'Edit periode';
             pageSubtitle.textContent = 'Isi tanggal dan simpan perubahan periode payroll.';
             setDisplay(btnTambah, 'none');
+            setDisplay(btnNavKomponenGaji, 'none');
             setDisplay(wrapperPicker, 'none');
 
             panelTitle.textContent = 'Data periode';
@@ -386,11 +395,20 @@ export function initPeriodePayroll() {
                     updateView();
                 }
             } else {
-                textError.textContent = 'Gagal memuat daftar periode dari server.';
+                let errorMsg = `Gagal memuat daftar periode dari server (HTTP ${res.status} ${res.statusText || ''}).`;
+                try {
+                    const errJson = await res.json();
+                    if (errJson && errJson.message) {
+                        errorMsg += ` ${errJson.message}`;
+                    }
+                } catch {
+                    // Abaikan jika body respon bukan JSON
+                }
+                textError.textContent = errorMsg;
                 setDisplay(alertError, 'flex');
             }
         } catch (err) {
-            textError.textContent = 'Gagal menghubungi server untuk memuat daftar periode.';
+            textError.textContent = `Gagal menghubungi server untuk memuat daftar periode: ${err.message}`;
             setDisplay(alertError, 'flex');
         }
     }

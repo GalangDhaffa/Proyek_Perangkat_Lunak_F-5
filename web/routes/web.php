@@ -16,6 +16,45 @@ Route::get('/periode-payroll', function () {
     return view('periode-payroll', ['periods' => $periods]);
 });
 
+Route::get('/komponen-gaji', function () {
+    $periods = Schema::hasTable('payroll_periods')
+        ? PayrollPeriod::orderBy('tanggal_mulai', 'desc')->get()
+        : collect();
+
+    $selectedPeriodeId = request()->query('periodeId');
+    $selectedEmployeeId = request()->query('employeeId', 'EMP-001');
+
+    return view('komponen-gaji', [
+        'periods' => $periods,
+        'selectedPeriodeId' => $selectedPeriodeId,
+        'selectedEmployeeId' => $selectedEmployeeId,
+    ]);
+});
+
+Route::get('/pratinjau-perhitungan', function () {
+    $periods = Schema::hasTable('payroll_periods')
+        ? PayrollPeriod::orderBy('tanggal_mulai', 'desc')->get()
+        : collect();
+
+    $selectedPeriodeId = request()->query('periodeId');
+    $selectedEmployeeId = request()->query('employeeId', 'EMP-001');
+
+    return view('pratinjau-perhitungan', [
+        'periods' => $periods,
+        'selectedPeriodeId' => $selectedPeriodeId,
+        'selectedEmployeeId' => $selectedEmployeeId,
+    ]);
+});
+
 Route::get('/rekap-biaya', function () {
-    return view('rekap-biaya');
+    $periods = Schema::hasTable('payroll_periods')
+        ? PayrollPeriod::orderBy('tanggal_mulai', 'desc')->get()
+        : collect();
+
+    $selectedPeriodeId = request()->query('periodeId', '01a1193d-2500-7c04-854b-8bf03c711dde');
+
+    return view('rekap-biaya', [
+        'periods' => $periods,
+        'selectedPeriodeId' => $selectedPeriodeId,
+    ]);
 });

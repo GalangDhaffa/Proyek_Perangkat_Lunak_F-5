@@ -49,6 +49,12 @@
                         <a href="{{ url('/periode-payroll') }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('periode-payroll*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
                             Periode payroll
                         </a>
+                        <a href="{{ url('/komponen-gaji') }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('komponen-gaji*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                            Komponen gaji
+                        </a>
+                        <a href="{{ url('/pratinjau-perhitungan') }}" class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ request()->is('pratinjau-perhitungan*') ? 'text-blue-700 bg-blue-50/80 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium' }}">
+                            Pratinjau perhitungan
+                        </a>
                         <a href="#" class="flex items-center px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors">
                             Termin tenaga ahli
                         </a>
