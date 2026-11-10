@@ -23,14 +23,14 @@ export function formatRupiah(amount) {
 }
 
 // Dataset Karyawan & Komponen Demo (FTR-K05-02 / Sesuai Aturan F-5)
-// Angka EMP-001 konsisten dengan success.json (Pendapatan: 7.750.000, Bonus: 750.000, Potongan: 200.000, BPJS: 65.000, Bersih: 7.485.000)
-// Catatan: Nama karyawan demo bukan nama resmi — ID EMP-001 merujuk seed F-4. Nama resmi menunggu integrasi API karyawan (F-2).
+// Catatan: EMP-001 adalah referensi demo cuti F-4. Jangan mengklaim referensi F-2 sebelum pemetaan dikonfirmasi.
+// Placeholder jabatan dan departemen menggunakan "Belum tersedia".
 const DEMO_EMPLOYEES = [
     {
         id: 'EMP-001',
-        nama: 'Karyawan EMP-001',
-        jabatan: '[Jabatan dari F-2]',
-        departemen: '[Departemen dari F-2]',
+        nama: 'EMP-001 (Referensi demo cuti F-4)',
+        jabatan: 'Belum tersedia',
+        departemen: 'Belum tersedia',
         gajiPokok: 7000000,
         bonus: 750000,
         bpjsKaryawan: 65000,
@@ -47,9 +47,9 @@ const DEMO_EMPLOYEES = [
     },
     {
         id: 'EMP-002',
-        nama: 'Karyawan EMP-002',
-        jabatan: '[Jabatan dari F-2]',
-        departemen: '[Departemen dari F-2]',
+        nama: 'EMP-002',
+        jabatan: 'Belum tersedia',
+        departemen: 'Belum tersedia',
         gajiPokok: 6500000,
         bonus: 500000,
         bpjsKaryawan: 65000,
@@ -73,9 +73,9 @@ const DEMO_EMPLOYEES = [
     },
     {
         id: 'EMP-003',
-        nama: 'Karyawan EMP-003',
-        jabatan: '[Jabatan dari F-2]',
-        departemen: '[Departemen dari F-2]',
+        nama: 'EMP-003',
+        jabatan: 'Belum tersedia',
+        departemen: 'Belum tersedia',
         gajiPokok: 8000000,
         bonus: 0,
         bpjsKaryawan: 80000,
@@ -92,9 +92,9 @@ const DEMO_EMPLOYEES = [
     },
     {
         id: 'EMP-999',
-        nama: 'Karyawan Baru (Data Kosong)',
-        jabatan: 'Quality Assurance',
-        departemen: 'Penjaminan Mutu',
+        nama: 'EMP-999 (Karyawan Baru)',
+        jabatan: 'Belum tersedia',
+        departemen: 'Belum tersedia',
         gajiPokok: 0,
         bonus: 0,
         bpjsKaryawan: 0,
@@ -172,12 +172,23 @@ export function initKomponenGaji() {
     const btnUjiGagalValidasi  = document.getElementById('btn-uji-gagal-validasi');
     const btnUjiSimulasiError  = document.getElementById('btn-uji-simulasi-error');
 
-    // ── In-Memory State Cache ───────────────────────────────────────────────
-    // Key: `${periodeId}:${employeeId}` -> Clone object of employee data
+    // ── Penyimpanan Demo Bersama (Shared Demo Storage) ────────────────────────
+    // Menggunakan localStorage agar data tersimpan sinkron dengan halaman Pratinjau Perhitungan
+    const DEMO_STORAGE_PREFIX = 'erpf5_demo_komponen_';
+    const DEMO_STALE_PREFIX   = 'erpf5_demo_stale_';
+
     const stateCache = new Map();
 
     function getStorageKey(periodeId, employeeId) {
         return `${periodeId || 'default'}:${employeeId || 'EMP-001'}`;
+    }
+
+    function getSharedStorageKey(periodeId, employeeId) {
+        return `${DEMO_STORAGE_PREFIX}${periodeId || 'default'}_${employeeId || 'EMP-001'}`;
+    }
+
+    function getSharedStaleKey(periodeId, employeeId) {
+        return `${DEMO_STALE_PREFIX}${periodeId || 'default'}_${employeeId || 'EMP-001'}`;
     }
 
     function getEmployeeData(employeeId) {
@@ -186,17 +197,45 @@ export function initKomponenGaji() {
 
     function getWorkingData(periodeId, employeeId) {
         const key = getStorageKey(periodeId, employeeId);
-        if (!stateCache.has(key)) {
-            const base = getEmployeeData(employeeId);
-            // Deep clone agar tidak merusak template asli
-            stateCache.set(key, JSON.parse(JSON.stringify(base)));
+        if (stateCache.has(key)) {
+            return stateCache.get(key);
         }
-        return stateCache.get(key);
+
+        // Cek apakah ada data tersimpan di penyimpanan demo bersama (localStorage)
+        const sharedKey = getSharedStorageKey(periodeId, employeeId);
+        try {
+            const savedRaw = localStorage.getItem(sharedKey);
+            if (savedRaw) {
+                const parsed = JSON.parse(savedRaw);
+                stateCache.set(key, parsed);
+                return parsed;
+            }
+        } catch (e) {
+            console.warn('[komponen-gaji] Gagal membaca shared demo storage:', e);
+        }
+
+        // Jika belum ada di storage, gunakan template dasar
+        const base = getEmployeeData(employeeId);
+        const cloned = JSON.parse(JSON.stringify(base));
+        stateCache.set(key, cloned);
+        return cloned;
     }
 
-    function setWorkingData(periodeId, employeeId, data) {
+    function setWorkingData(periodeId, employeeId, data, persistToStorage = false) {
         const key = getStorageKey(periodeId, employeeId);
-        stateCache.set(key, JSON.parse(JSON.stringify(data)));
+        const cloned = JSON.parse(JSON.stringify(data));
+        stateCache.set(key, cloned);
+
+        if (persistToStorage) {
+            try {
+                const sharedKey = getSharedStorageKey(periodeId, employeeId);
+                localStorage.setItem(sharedKey, JSON.stringify(cloned));
+                // Tandai bahwa pratinjau perhitungan untuk periode & employee ini perlu dihitung ulang
+                localStorage.setItem(getSharedStaleKey(periodeId, employeeId), 'true');
+            } catch (e) {
+                console.warn('[komponen-gaji] Gagal menulis ke shared demo storage:', e);
+            }
+        }
     }
 
     // ── Baca Periode Awal dari Database / Attributes ────────────────────────
@@ -231,20 +270,29 @@ export function initKomponenGaji() {
         }
     }
 
-    // Perbarui link navigasi ke periode dan pratinjau
+    // Perbarui link navigasi ke periode dan pratinjau serta jaga query string URL
     function updateNavigationLinks() {
         const currentPid = selectPeriode ? selectPeriode.value : '';
         const currentEmpId = selectKaryawan ? selectKaryawan.value : '';
 
+        const params = new URLSearchParams();
+        if (currentPid) params.set('periodeId', currentPid);
+        if (currentEmpId) params.set('employeeId', currentEmpId);
+
+        const paramString = params.toString() ? '?' + params.toString() : '';
+
         if (btnNavKePeriode) {
-            btnNavKePeriode.href = `/periode-payroll`;
+            btnNavKePeriode.href = currentPid ? `/periode-payroll?periodeId=${encodeURIComponent(currentPid)}` : `/periode-payroll`;
         }
 
         if (btnNavKePratinjau) {
-            const params = new URLSearchParams();
-            if (currentPid) params.set('periodeId', currentPid);
-            if (currentEmpId) params.set('employeeId', currentEmpId);
-            btnNavKePratinjau.href = `/pratinjau-perhitungan?${params.toString()}`;
+            btnNavKePratinjau.href = `/pratinjau-perhitungan${paramString}`;
+        }
+
+        // Sinkronkan parameter query di address bar browser tanpa reload
+        if (window.history && window.history.replaceState && paramString) {
+            const newUrl = `${window.location.pathname}${paramString}`;
+            window.history.replaceState(null, '', newUrl);
         }
     }
 
@@ -773,13 +821,16 @@ export function initKomponenGaji() {
             const currentPeriodeId = selectPeriode.value;
             const currentEmpId = selectKaryawan.value;
             const currentEmp = getWorkingData(currentPeriodeId, currentEmpId);
+            // Simpan ke shared demo storage dan tandai stale untuk pratinjau
+            setWorkingData(currentPeriodeId, currentEmpId, currentEmp, true);
+
             const namaPeriode = selectPeriode.options[selectPeriode.selectedIndex]?.textContent || 'Periode Terpilih';
 
             btnSimpanKomponen.disabled = false;
             hide(iconSimpanSpinner);
             textTombolSimpan.textContent = 'Simpan komponen';
 
-            textSukses.textContent = `Komponen gaji untuk ${currentEmp.nama} (${currentEmp.id}) pada ${namaPeriode} berhasil divalidasi dan disimpan ke sesi demo.`;
+            textSukses.textContent = `Komponen gaji untuk ${currentEmp.nama} (${currentEmp.id}) pada ${namaPeriode} berhasil divalidasi dan disimpan ke penyimpanan demo bersama. Pratinjau perhitungan ditandai perlu dihitung ulang.`;
             show(alertSukses);
             alertSukses.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 350);
@@ -825,9 +876,15 @@ export function initKomponenGaji() {
         btnResetForm.addEventListener('click', () => {
             const currentPeriodeId = selectPeriode.value;
             const currentEmpId = selectKaryawan.value;
+            try {
+                localStorage.removeItem(getSharedStorageKey(currentPeriodeId, currentEmpId));
+                localStorage.setItem(getSharedStaleKey(currentPeriodeId, currentEmpId), 'true');
+            } catch (e) {
+                console.warn('[komponen-gaji] Gagal mereset shared storage:', e);
+            }
             // Ambil ulang dari template dasar
             const base = getEmployeeData(currentEmpId);
-            setWorkingData(currentPeriodeId, currentEmpId, base);
+            setWorkingData(currentPeriodeId, currentEmpId, base, false);
             renderForm();
         });
     }
@@ -835,6 +892,7 @@ export function initKomponenGaji() {
     // ── Ganti Karyawan atau Periode (Loading State) ──────────────────────────
     function switchContextWithLoading() {
         hideAlerts();
+        updateNavigationLinks();
         show(stateLoading);
         hide(formKomponenGaji);
         hide(stateEmptyBanner);

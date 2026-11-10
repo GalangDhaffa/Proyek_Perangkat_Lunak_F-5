@@ -176,7 +176,7 @@
                         class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-2xs cursor-pointer"
                     >
                         <option value="EMP-001" {{ ($selectedEmployeeId ?? 'EMP-001') === 'EMP-001' ? 'selected' : '' }}>
-                            EMP-001 &mdash; Karyawan 1 (Referensi F-2 / Seed Cuti F-4)
+                            EMP-001 &mdash; Referensi demo cuti F-4
                         </option>
                         <option value="EMP-002" {{ ($selectedEmployeeId ?? '') === 'EMP-002' ? 'selected' : '' }}>
                             EMP-002 &mdash; Karyawan 2 (Data Demo Tambahan)
@@ -190,10 +190,10 @@
                     </select>
                     <p id="info-karyawan" class="text-[11px] text-slate-500 flex flex-wrap items-center gap-1.5 pt-1">
                         <span class="text-slate-400">Sumber ID:</span>
-                        <span id="text-karyawan-sumber" class="font-medium text-slate-700">Seed F-4 / Contoh F-2</span>
+                        <span id="text-karyawan-sumber" class="font-medium text-slate-700">Referensi demo cuti F-4</span>
                         <span class="text-slate-300">&bull;</span>
                         <span class="text-slate-400">Status Profil:</span>
-                        <span id="text-karyawan-profil" class="text-slate-500">Nama &amp; profil resmi menunggu integrasi API F-2</span>
+                        <span id="text-karyawan-profil" class="text-slate-500">Belum tersedia</span>
                     </p>
                 </div>
 
@@ -357,12 +357,12 @@
                             <span>&bull;</span>
                             <div class="flex items-center gap-1">
                                 <span class="text-slate-400">Jabatan:</span>
-                                <span id="view-karyawan-jabatan" class="font-medium text-slate-700">Software Engineer</span>
+                                <span id="view-karyawan-jabatan" class="font-medium text-slate-700">Belum tersedia</span>
                             </div>
                             <span>&bull;</span>
                             <div class="flex items-center gap-1">
                                 <span class="text-slate-400">Departemen:</span>
-                                <span id="view-karyawan-dept" class="font-medium text-slate-700">Teknologi Informasi</span>
+                                <span id="view-karyawan-dept" class="font-medium text-slate-700">Belum tersedia</span>
                             </div>
                         </div>
                     </div>

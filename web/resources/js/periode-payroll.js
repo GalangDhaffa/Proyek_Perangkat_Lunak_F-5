@@ -265,6 +265,13 @@ export function initPeriodePayroll() {
                     btnNavKomponenGaji.href = pid ? `/komponen-gaji?periodeId=${encodeURIComponent(pid)}` : '/komponen-gaji';
                 }
 
+                if (window.history && window.history.replaceState) {
+                    const pid = current.uuid || current.id;
+                    if (pid) {
+                        window.history.replaceState(null, '', `?periodeId=${encodeURIComponent(pid)}`);
+                    }
+                }
+
                 btnUbah.disabled = false;
                 btnUbah.classList.remove('opacity-50', 'cursor-not-allowed');
 
@@ -752,6 +759,13 @@ export function initPeriodePayroll() {
     }
 
     // ── Inisialisasi Awal ────────────────────────────────────────────────────
+    const paramPid = root.dataset.selectedPeriodeId || (new URLSearchParams(window.location.search)).get('periodeId');
+    if (paramPid) {
+        const found = periods.find(p => (p.id || p.uuid).toLowerCase() === paramPid.toLowerCase());
+        if (found) {
+            selectedId = found.id;
+        }
+    }
 
     if (periods.length > 0 && !selectedId) {
         selectedId = periods[0].id;

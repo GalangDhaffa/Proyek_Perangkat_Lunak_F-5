@@ -13,7 +13,12 @@ Route::get('/periode-payroll', function () {
         ? PayrollPeriod::orderBy('tanggal_mulai', 'desc')->get()
         : collect();
 
-    return view('periode-payroll', ['periods' => $periods]);
+    $selectedPeriodeId = request()->query('periodeId');
+
+    return view('periode-payroll', [
+        'periods' => $periods,
+        'selectedPeriodeId' => $selectedPeriodeId,
+    ]);
 });
 
 Route::get('/komponen-gaji', function () {

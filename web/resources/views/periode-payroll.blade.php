@@ -32,7 +32,12 @@
         </button>
     </x-slot:headerActions>
 
-    <div id="periode-payroll-app" class="space-y-6" data-initial-periods='@json($periods ?? [])'>
+    <div
+        id="periode-payroll-app"
+        class="space-y-6"
+        data-initial-periods='@json($periods ?? [])'
+        data-selected-periode-id="{{ $selectedPeriodeId ?? '' }}"
+    >
 
         {{-- Banner Pesan Sukses --}}
         <div
@@ -70,7 +75,11 @@
                     class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer shadow-xs"
                 >
                     @forelse($periods ?? [] as $p)
-                        <option value="{{ $p->uuid ?: $p->id }}" {{ $loop->first ? 'selected' : '' }}>
+                        @php
+                            $pUuid = $p->uuid ?: $p->id;
+                            $isSelected = ($selectedPeriodeId && strtolower($selectedPeriodeId) === strtolower($pUuid)) || (!$selectedPeriodeId && $loop->first);
+                        @endphp
+                        <option value="{{ $pUuid }}" {{ $isSelected ? 'selected' : '' }}>
                             {{ $p->nama_periode ?: \App\Models\PayrollPeriod::generateNamaPeriode($p->tanggal_mulai) }}
                         </option>
                     @empty

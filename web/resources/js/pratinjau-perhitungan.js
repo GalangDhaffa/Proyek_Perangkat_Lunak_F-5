@@ -34,14 +34,15 @@ export function formatWaktuSekarang() {
     return `${tgl}, ${jam}:${mnt}:${dtk} WIB`;
 }
 
-// Data Master Karyawan Demo (Sinkron dengan komponen-gaji.js dan success.json)
-// Catatan: EMP-001 merujuk ID seed cuti F-4. Nama resmi menunggu integrasi API karyawan (F-2).
+// Data Master Karyawan Demo (Sinkron dengan komponen-gaji.js dan dokumen acuan F-5)
+// Catatan: EMP-001 adalah referensi demo cuti F-4. Jangan mengklaim referensi F-2 sebelum pemetaan dikonfirmasi.
+// Placeholder jabatan dan departemen menggunakan "Belum tersedia".
 const DEMO_EMPLOYEES_MAP = {
     'EMP-001': {
         id: 'EMP-001',
-        nama: 'Karyawan EMP-001',
-        jabatan: '[Jabatan dari F-2]',
-        departemen: '[Departemen dari F-2]',
+        nama: 'EMP-001 (Referensi demo cuti F-4)',
+        jabatan: 'Belum tersedia',
+        departemen: 'Belum tersedia',
         gajiPokok: 7000000,
         bonus: 750000,
         bpjsKaryawan: 65000,
@@ -52,9 +53,9 @@ const DEMO_EMPLOYEES_MAP = {
     },
     'EMP-002': {
         id: 'EMP-002',
-        nama: 'Karyawan EMP-002',
-        jabatan: '[Jabatan dari F-2]',
-        departemen: '[Departemen dari F-2]',
+        nama: 'EMP-002',
+        jabatan: 'Belum tersedia',
+        departemen: 'Belum tersedia',
         gajiPokok: 6500000,
         bonus: 500000,
         bpjsKaryawan: 65000,
@@ -66,9 +67,9 @@ const DEMO_EMPLOYEES_MAP = {
     },
     'EMP-003': {
         id: 'EMP-003',
-        nama: 'Karyawan EMP-003',
-        jabatan: '[Jabatan dari F-2]',
-        departemen: '[Departemen dari F-2]',
+        nama: 'EMP-003',
+        jabatan: 'Belum tersedia',
+        departemen: 'Belum tersedia',
         gajiPokok: 8000000,
         bonus: 0,
         bpjsKaryawan: 80000,
@@ -79,9 +80,9 @@ const DEMO_EMPLOYEES_MAP = {
     },
     'EMP-999': {
         id: 'EMP-999',
-        nama: 'Karyawan Baru (Belum Ada Konfigurasi)',
-        jabatan: 'Quality Assurance',
-        departemen: 'Penjaminan Mutu',
+        nama: 'EMP-999 (Karyawan Baru)',
+        jabatan: 'Belum tersedia',
+        departemen: 'Belum tersedia',
         gajiPokok: 0,
         bonus: 0,
         bpjsKaryawan: 0,
@@ -218,6 +219,46 @@ export function initPratinjauPerhitungan() {
         hide(alertError);
     }
 
+    // ── Penyimpanan Demo Bersama (Shared Demo Storage) ────────────────────────
+    // Menghubungkan data simpan Komponen Gaji dengan Pratinjau berdasarkan periodeId dan employeeId
+    const DEMO_STORAGE_PREFIX = 'erpf5_demo_komponen_';
+    const DEMO_STALE_PREFIX   = 'erpf5_demo_stale_';
+
+    function getSharedStorageKey(periodeId, employeeId) {
+        return `${DEMO_STORAGE_PREFIX}${periodeId || 'default'}_${employeeId || 'EMP-001'}`;
+    }
+
+    function getSharedStaleKey(periodeId, employeeId) {
+        return `${DEMO_STALE_PREFIX}${periodeId || 'default'}_${employeeId || 'EMP-001'}`;
+    }
+
+    /**
+     * Mengambil data komponen gaji karyawan.
+     * Mengutamakan data yang disimpan di penyimpanan demo bersama (localStorage).
+     * Jangan mengganti input tersimpan dengan fixture bawaan!
+     */
+    function getEmployeeComponentData(periodeId, employeeId) {
+        const sharedKey = getSharedStorageKey(periodeId, employeeId);
+        try {
+            const savedRaw = localStorage.getItem(sharedKey);
+            if (savedRaw) {
+                const parsed = JSON.parse(savedRaw);
+                parsed.id = employeeId;
+                if (!parsed.nama) {
+                    parsed.nama = (DEMO_EMPLOYEES_MAP[employeeId]?.nama) || employeeId;
+                }
+                if (!parsed.jabatan) parsed.jabatan = 'Belum tersedia';
+                if (!parsed.departemen) parsed.departemen = 'Belum tersedia';
+                return { data: parsed, isStored: true };
+            }
+        } catch (e) {
+            console.warn('[pratinjau-perhitungan] Gagal membaca shared demo storage:', e);
+        }
+
+        const base = DEMO_EMPLOYEES_MAP[employeeId] || DEMO_EMPLOYEES_MAP['EMP-001'];
+        return { data: JSON.parse(JSON.stringify(base)), isStored: false };
+    }
+
     // ── Sinkronisasi Link Navigasi ──────────────────────────────────────────
     function updateNavigationLinks() {
         const currentPid = selectPeriode ? selectPeriode.value : '';
@@ -227,19 +268,25 @@ export function initPratinjauPerhitungan() {
         if (currentPid) params.set('periodeId', currentPid);
         if (currentEmpId) params.set('employeeId', currentEmpId);
 
-        const paramString = params.toString();
+        const paramString = params.toString() ? '?' + params.toString() : '';
 
         if (btnNavKeKomponen) {
-            btnNavKeKomponen.href = `/komponen-gaji?${paramString}`;
+            btnNavKeKomponen.href = `/komponen-gaji${paramString}`;
         }
         if (linkUbahKomponen) {
-            linkUbahKomponen.href = `/komponen-gaji?${paramString}`;
+            linkUbahKomponen.href = `/komponen-gaji${paramString}`;
         }
         if (btnKeAturKomponen) {
-            btnKeAturKomponen.href = `/komponen-gaji?${paramString}`;
+            btnKeAturKomponen.href = `/komponen-gaji${paramString}`;
         }
         if (btnNavKePeriode) {
-            btnNavKePeriode.href = `/periode-payroll`;
+            btnNavKePeriode.href = currentPid ? `/periode-payroll?periodeId=${encodeURIComponent(currentPid)}` : `/periode-payroll`;
+        }
+
+        // Sinkronkan parameter query di address bar browser tanpa reload
+        if (window.history && window.history.replaceState && paramString) {
+            const newUrl = `${window.location.pathname}${paramString}`;
+            window.history.replaceState(null, '', newUrl);
         }
     }
 
@@ -259,25 +306,39 @@ export function initPratinjauPerhitungan() {
             badgePeriodeStatus.textContent = 'Draf';
         }
 
-        const empId = selectKaryawan.value;
-        const empData = DEMO_EMPLOYEES_MAP[empId] || DEMO_EMPLOYEES_MAP['EMP-001'];
-        textKaryawanDept.textContent = empData.departemen || '—';
-        textKaryawanJabatan.textContent = empData.jabatan || '—';
+        const currentPid = selectPeriode.value;
+        const currentEmpId = selectKaryawan.value;
+        const { data: empData } = getEmployeeComponentData(currentPid, currentEmpId);
+
+        textKaryawanDept.textContent = empData.departemen || 'Belum tersedia';
+        textKaryawanJabatan.textContent = empData.jabatan || 'Belum tersedia';
 
         updateNavigationLinks();
         checkStaleCondition();
     }
 
     // ── Periksa Apakah Hasil Menjadi Stale (Perlu Hitung Ulang) ──────────────
-    function checkStaleCondition() {
-        if (!hasCalculated) return;
+    function isDataMarkedStale(pid, empId) {
+        try {
+            if (localStorage.getItem(getSharedStaleKey(pid, empId)) === 'true') {
+                return true;
+            }
+        } catch (e) {}
 
+        if (hasCalculated) {
+            if (pid !== lastCalculatedPeriodeId || empId !== lastCalculatedEmployeeId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function checkStaleCondition() {
         const currentPid = selectPeriode.value;
         const currentEmpId = selectKaryawan.value;
 
-        const isChanged = (currentPid !== lastCalculatedPeriodeId || currentEmpId !== lastCalculatedEmployeeId);
-
-        if (isChanged) {
+        if (isDataMarkedStale(currentPid, currentEmpId)) {
             isStale = true;
             show(alertStale);
             hide(alertSukses);
@@ -288,8 +349,10 @@ export function initPratinjauPerhitungan() {
             viewBadgeStatusHasil.textContent = 'Perlu Dihitung Ulang (Stale)';
             viewBadgeStatusHasil.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300';
 
-            stateContent.classList.add('opacity-75');
-        } else {
+            if (hasCalculated) {
+                stateContent.classList.add('opacity-75');
+            }
+        } else if (hasCalculated) {
             isStale = false;
             hide(alertStale);
 
@@ -304,12 +367,12 @@ export function initPratinjauPerhitungan() {
     }
 
     // ── Render Rincian Kalkulasi ────────────────────────────────────────────
-    function renderCalculationData(emp, calculationSource = 'Simulasi Demo Frontend') {
+    function renderCalculationData(emp, calculationSource = 'Mode Demo (Penyimpanan Bersama)') {
         // Tampilkan info karyawan
         viewKaryawanNama.textContent = emp.nama;
         viewKaryawanId.textContent = emp.id;
-        viewKaryawanJabatan.textContent = emp.jabatan;
-        viewKaryawanDept.textContent = emp.departemen;
+        viewKaryawanJabatan.textContent = emp.jabatan || 'Belum tersedia';
+        viewKaryawanDept.textContent = emp.departemen || 'Belum tersedia';
         viewWaktuHitung.textContent = formatWaktuSekarang();
         viewSumberData.textContent = calculationSource;
 
@@ -351,6 +414,11 @@ export function initPratinjauPerhitungan() {
             }
         });
 
+        // Rumus Aturan ERP F-5:
+        // Total Pendapatan = Gaji Pokok + Bonus + Total Komponen Pendapatan Aktif
+        // Total Pengurang Gaji = Total Komponen Potongan Aktif + BPJS Karyawan
+        // Estimasi Gaji Bersih = Total Pendapatan - Total Pengurang Gaji
+        // BPJS Perusahaan: ditanggung perusahaan, TIDAK mengurangi gaji bersih karyawan
         const totalPendapatan = gajiPokok + bonus + totalKomponenPendapatan;
         const totalPotonganKaryawan = totalKomponenPotongan + bpjsKaryawan;
         const gajiBersih = totalPendapatan - totalPotonganKaryawan;
@@ -371,21 +439,6 @@ export function initPratinjauPerhitungan() {
         statTotalPotongan.textContent = formatRupiah(totalKomponenPotongan);
         statBpjsKaryawan.textContent = formatRupiah(bpjsKaryawan);
         statGajiBersih.textContent = formatRupiah(gajiBersih);
-
-        // Update State Pelacakan
-        hasCalculated = true;
-        isStale = false;
-        lastCalculatedPeriodeId = selectPeriode.value;
-        lastCalculatedEmployeeId = selectKaryawan.value;
-
-        hide(alertStale);
-        stateContent.classList.remove('opacity-75');
-
-        viewBadgeStatusHasil.textContent = 'Hasil Mutakhir';
-        viewBadgeStatusHasil.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
-
-        badgeStatusKalkulasi.textContent = 'Hasil mutakhir';
-        badgeStatusKalkulasi.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300';
     }
 
     function escapeHtml(str) {
@@ -398,6 +451,35 @@ export function initPratinjauPerhitungan() {
             .replace(/'/g, '&#039;');
     }
 
+    // ── Penanganan Galat Server (HTTP 500 / Error Ramah Pengguna) ────────────
+    function handleServerError(statusCode = 500, developerLogMessage = '') {
+        hideAllAlerts();
+        hide(stateLoading);
+        hide(stateContent);
+        hide(stateUnconfigured);
+
+        // Simpan detail exception/SQL ke log browser pengembang
+        console.error(`[pratinjau-perhitungan] Server error HTTP ${statusCode}:`, developerLogMessage);
+
+        const errorBadge = document.getElementById('error-code-badge');
+        if (errorBadge) {
+            errorBadge.textContent = `HTTP_${statusCode}_ERROR`;
+        }
+
+        const titleErr = document.getElementById('title-error');
+        if (titleErr) {
+            titleErr.textContent = 'Gagal Memproses Pratinjau Perhitungan';
+        }
+
+        // Tampilkan pesan ramah pengguna tanpa membocorkan trace SQL
+        textError.textContent = 'Terjadi kendala pada server saat memproses perhitungan. Silakan coba beberapa saat lagi.';
+        show(alertError);
+        alertError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        badgeStatusKalkulasi.textContent = 'Gagal';
+        badgeStatusKalkulasi.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-300';
+    }
+
     // ── Eksekusi Pemanggilan API / Kalkulasi ─────────────────────────────────
     async function executeHitungPratinjau() {
         const currentPid = selectPeriode.value;
@@ -405,9 +487,12 @@ export function initPratinjauPerhitungan() {
 
         hideAllAlerts();
 
-        // 1. Cek Apakah Karyawan Belum Dikonfigurasi (EMP-999 atau Gaji Pokok 0 & Tanpa Komponen)
-        const empBase = DEMO_EMPLOYEES_MAP[currentEmpId] || DEMO_EMPLOYEES_MAP['EMP-001'];
-        const isUnconfigured = (currentEmpId === 'EMP-999' || (empBase.gajiPokok === 0 && (!empBase.komponen || empBase.komponen.length === 0)));
+        // Ambil data komponen karyawan dari penyimpanan demo bersama (atau template bawaan jika belum ada)
+        const { data: empData, isStored } = getEmployeeComponentData(currentPid, currentEmpId);
+
+        // 1. Cek Apakah Karyawan Belum Dikonfigurasi (EMP-999 tanpa komponen atau Gaji Pokok 0 & Tanpa Komponen)
+        const isUnconfigured = (currentEmpId === 'EMP-999' && !isStored) ||
+                               (empData.gajiPokok === 0 && (!empData.komponen || empData.komponen.length === 0));
 
         if (isUnconfigured) {
             hide(stateLoading);
@@ -428,55 +513,41 @@ export function initPratinjauPerhitungan() {
         hide(iconHitungCalc);
         textTombolHitung.textContent = 'Memproses…';
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        // Lakukan kalkulasi dalam mode demo bersama
+        setTimeout(() => {
+            hide(stateLoading);
+            show(stateContent);
 
-        try {
-            // Panggil API backend payroll
-            const apiUrl = `/api/payroll/v1/pratinjau-perhitungan?periodeId=${encodeURIComponent(currentPid)}&employeeId=${encodeURIComponent(currentEmpId)}`;
-            const response = await fetch(apiUrl, {
-                headers: { 'Accept': 'application/json' },
-                signal: controller.signal,
-            });
+            const sourceLabel = isStored ? 'Penyimpanan Demo Bersama (Tersimpan)' : 'Mode Demo Frontend (Acuan F-5)';
+            renderCalculationData(empData, sourceLabel);
 
-            clearTimeout(timeoutId);
+            // Bersihkan flag stale setelah perhitungan dijalankan
+            try {
+                localStorage.removeItem(getSharedStaleKey(currentPid, currentEmpId));
+            } catch (e) {}
 
-            if (response.ok) {
-                // Backend endpoint telah aktif dan mengembalikan data kalkulasi
-                const data = await response.json();
-                hide(stateLoading);
-                show(stateContent);
-                renderCalculationData(data.data || data, 'API Backend Payroll');
+            hasCalculated = true;
+            isStale = false;
+            lastCalculatedPeriodeId = currentPid;
+            lastCalculatedEmployeeId = currentEmpId;
 
-                textSukses.textContent = `Pratinjau perhitungan untuk ${empBase.nama} (${empBase.id}) berhasil diambil dari API backend.`;
-                show(alertSukses);
-                return;
-            }
+            hide(alertStale);
+            stateContent.classList.remove('opacity-75');
 
-            // Jika endpoint belum tersedia di backend (misal HTTP 404 / 501 / 503)
-            // Gunakan simulasi demo terstandar dengan penanda transparan
-            handleDemoFallback(empBase, `API backend mengembalikan status ${response.status}. Data ditampilkan dalam mode demo.`);
-        } catch (err) {
-            clearTimeout(timeoutId);
-            // Koneksi gagal / offline / abort
-            handleDemoFallback(empBase, `Koneksi ke backend belum tersedia (${err.message}). Data ditampilkan dalam mode demo.`);
-        } finally {
+            viewBadgeStatusHasil.textContent = 'Hasil Mutakhir';
+            viewBadgeStatusHasil.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+
+            badgeStatusKalkulasi.textContent = 'Hasil mutakhir';
+            badgeStatusKalkulasi.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300';
+
+            textSukses.textContent = `Pratinjau perhitungan untuk ${empData.nama} (${empData.id}) berhasil diproses.`;
+            show(alertSukses);
+
             btnHitungPratinjau.disabled = false;
             hide(iconHitungSpinner);
             show(iconHitungCalc);
             textTombolHitung.textContent = 'Hitung Pratinjau';
-        }
-    }
-
-    function handleDemoFallback(empBase, noticeMsg) {
-        setTimeout(() => {
-            hide(stateLoading);
-            show(stateContent);
-            renderCalculationData(empBase, 'Mode Demo (API payroll belum tersedia)');
-
-            textSukses.textContent = `Pratinjau perhitungan untuk ${empBase.nama} (${empBase.id}) berhasil dihitung dalam mode demo (sesuai dokumen acuan F-5).`;
-            show(alertSukses);
-        }, 300);
+        }, 250);
     }
 
     // ── Event Listeners ─────────────────────────────────────────────────────
@@ -542,33 +613,21 @@ export function initPratinjauPerhitungan() {
         });
     }
 
-    // 3. Simulasi Gagal (503 & Coba Lagi)
+    // 3. Simulasi Gagal HTTP 500 (Pesan Ramah Pengguna & Detail di Log)
     if (btnUjiSimulasiGagal) {
         btnUjiSimulasiGagal.addEventListener('click', () => {
-            hideAllAlerts();
-            hide(stateLoading);
-            hide(stateContent);
-            hide(stateUnconfigured);
-
-            textError.textContent = 'Simulasi Galat 503: Endpoint POST /api/payroll/v1/pratinjau-perhitungan belum tersedia di backend (Mode demo). Silakan gunakan tombol &ldquo;Coba lagi&rdquo; di bawah untuk menguji perulangan request.';
-            show(alertError);
-            alertError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            handleServerError(500, 'Simulasi Server Error: PDOException: SQLSTATE[HY000]: database disk image is malformed in PayrollCalculationController.php on line 142.');
         });
     }
 
     // 4. Tandai Hasil Lama (Stale)
     if (btnUjiTandaiStale) {
         btnUjiTandaiStale.addEventListener('click', () => {
-            if (!hasCalculated) {
-                // Jalankan hitung dulu agar ada data
-                selectKaryawan.value = 'EMP-001';
-                executeHitungPratinjau();
-            }
-            // Ubah periode untuk memicu stale
-            if (selectPeriode.options.length > 1) {
-                selectPeriode.selectedIndex = (selectPeriode.selectedIndex === 0) ? 1 : 0;
-            }
-            updateSelectedMeta();
+            const currentPid = selectPeriode.value;
+            const currentEmpId = selectKaryawan.value;
+            try {
+                localStorage.setItem(getSharedStaleKey(currentPid, currentEmpId), 'true');
+            } catch (e) {}
             checkStaleCondition();
         });
     }
@@ -576,8 +635,20 @@ export function initPratinjauPerhitungan() {
     // ── Inisialisasi Pertama Kali ───────────────────────────────────────────
     updateSelectedMeta();
 
-    // Hitung pratinjau otomatis untuk karyawan terpilih pertama kali
-    executeHitungPratinjau();
+    const currentInitialPid = selectPeriode.value;
+    const currentInitialEmpId = selectKaryawan.value;
+
+    // Jika data ditandai stale di shared storage, render pratinjau dengan tanda stale (jangan auto-reset)
+    if (isDataMarkedStale(currentInitialPid, currentInitialEmpId)) {
+        const { data: initialEmp, isStored } = getEmployeeComponentData(currentInitialPid, currentInitialEmpId);
+        show(stateContent);
+        renderCalculationData(initialEmp, isStored ? 'Penyimpanan Demo Bersama (Tersimpan)' : 'Mode Demo Frontend (Acuan F-5)');
+        hasCalculated = true;
+        checkStaleCondition();
+    } else {
+        // Hitung pratinjau otomatis untuk karyawan terpilih pertama kali
+        executeHitungPratinjau();
+    }
 }
 
 // Jalankan otomatis saat DOM siap
